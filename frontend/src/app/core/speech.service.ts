@@ -1,19 +1,38 @@
 import { Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
-// Speaks short confirmations aloud at the kiosk using the browser's built-in
-// Web Speech API (SpeechSynthesis) — free, offline, no backend. Used to greet
-// an employee by name on a successful IN/OUT punch.
+// Speaks short confirmations aloud at the kiosk.
+// - On a NATIVE app (Android/iOS): uses the Capacitor TextToSpeech plugin (the
+//   phone's built-in TTS engine) — reliable, unlike Web Speech in a WebView.
+// - In a browser: uses the Web Speech API (SpeechSynthesis).
 @Injectable({ providedIn: 'root' })
 export class SpeechService {
   private get synth(): SpeechSynthesis | null {
     return typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
   }
 
-  // Speak the given text. Cancels anything already speaking so back-to-back
-  // punches don't queue up. Silently no-ops if speech isn't supported.
+  // Speak the given text. No-ops silently if unsupported.
   speak(text: string): void {
+    if (!text) return;
+
+    if (Capacitor.isNativePlatform()) {
+      // Native phone TTS (works inside the APK WebView).
+      TextToSpeech.stop().catch(() => undefined);
+      TextToSpeech.speak({
+        text,
+        lang: 'en-US',
+        rate: 1.0,
+        pitch: 1.0,
+        volume: 1.0,
+        category: 'ambient',
+      }).catch(() => undefined);
+      return;
+    }
+
+    // Browser fallback.
     const synth = this.synth;
-    if (!synth || !text) return;
+    if (!synth) return;
     try {
       synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -23,7 +42,7 @@ export class SpeechService {
       u.volume = 1;
       synth.speak(u);
     } catch {
-      /* speech unavailable — ignore */
+      /* speech unavailable - ignore */
     }
   }
 
