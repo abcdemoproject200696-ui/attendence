@@ -392,19 +392,26 @@ export class KioskPage implements AfterViewInit, OnDestroy {
           },
           error: (err) => {
             this.result.set(null);
+            this.loading.set(false);
             if (err?.status === 404) {
-              // Unknown face → prominent NON-EMPLOYEE card (not a small error).
+              // Unknown face → prominent NON-EMPLOYEE card with Sign Up / Login.
               this.nonEmployee.set(true);
               this.error.set(null);
-              // Public door scanner: take an unknown person to Sign Up shortly.
-              this.scheduleSignupRedirect();
+              if (!this.auth.isLoggedIn()) {
+                // Public scanner: PAUSE auto-scan so the card + Sign Up/Login buttons
+                // stay stable (don't flash/reset), and auto-redirect to Sign Up once.
+                this.autoScan.set(false);
+                this.scheduleSignupRedirect();
+                resolve();
+                return;
+              }
+              // Logged-in admin just viewing the kiosk: flash the card, keep scanning.
+              this.startCooldown(this.RETRY_COOLDOWN);
             } else {
               this.nonEmployee.set(false);
-              this.error.set('Punch failed. Check the backend at http://localhost:5080.');
+              this.error.set('Punch failed. Please try again.');
+              this.startCooldown(this.RETRY_COOLDOWN);
             }
-            this.loading.set(false);
-            // Shorter pause for a non-match so we don't hammer the backend.
-            this.startCooldown(this.RETRY_COOLDOWN);
             resolve();
           },
         });
