@@ -1,0 +1,39 @@
+.signup-content {
+  --background: linear-gradient(160deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+}
+
+.signup-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100%;
+  padding: 16px 0;
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.signup-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signup-btn {
+  margin-top: 16px;
+}
+
+.signup-login-link {
+  text-align: center;
+  margin-top: 14px;
+  color: var(--ion-color-medium);
+}
+
+.signup-login-link a {
+  color: var(--ion-color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}

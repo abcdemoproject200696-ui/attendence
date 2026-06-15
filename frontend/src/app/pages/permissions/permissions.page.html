@@ -1,0 +1,81 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Permissions</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card class="perm-card">
+    <ion-card-content>
+      <p class="intro">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        Choose a role, then tick the pages it can access. Admin always has full access.
+      </p>
+
+      @if (loading()) {
+      <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+      }
+      @if (error()) {
+      <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+      }
+
+      @if (!loading() && !error()) {
+      <ion-item>
+        <ion-select
+          label="Role"
+          labelPlacement="stacked"
+          [(ngModel)]="roleId"
+          (ionChange)="onRoleChange()"
+          placeholder="Select a role"
+        >
+          @for (r of roles(); track r.id) {
+          <ion-select-option [value]="r.id">{{ r.name }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      @if (roleId != null) {
+        @if (isAdminRole()) {
+        <ion-note class="admin-note">
+          Admin has full access to every page. This cannot be changed.
+        </ion-note>
+        }
+
+        @if (loadingPerms()) {
+        <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+        } @else {
+        <ion-list>
+          @for (p of pages(); track p.id) {
+          <ion-item>
+            <ion-checkbox
+              [checked]="checked()[p.id]"
+              [disabled]="isAdminRole()"
+              (ionChange)="toggle(p.id, $event.detail.checked)"
+            >
+              <ion-label>
+                <h3>{{ p.name }}</h3>
+                <p>{{ p.route }}</p>
+              </ion-label>
+            </ion-checkbox>
+          </ion-item>
+          }
+        </ion-list>
+
+        <ion-button
+          expand="block"
+          class="save-btn"
+          (click)="save()"
+          [disabled]="saving() || isAdminRole()"
+        >
+          @if (saving()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+          <ion-icon slot="start" name="save-outline"></ion-icon> Save }
+        </ion-button>
+        }
+      }
+      }
+    </ion-card-content>
+  </ion-card>
+</ion-content>

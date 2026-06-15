@@ -1,0 +1,167 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Daily Attendance</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row class="ion-align-items-center">
+      <ion-col size="8" size-md="4">
+        <ion-item>
+          <ion-input type="date" label="Date" labelPlacement="stacked" [(ngModel)]="date" (ionChange)="load()"></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="4" size-md="2">
+        <ion-button expand="block" (click)="load()" [disabled]="loading()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon> Load
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  @if (loading()) {
+  <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+  }
+  @if (error()) {
+  <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+  }
+
+  @if (!loading() && !error()) {
+  <div class="table-wrap">
+    <ion-grid class="att-table">
+      <ion-row class="thead">
+        <ion-col size="3">Employee</ion-col>
+        <ion-col size="1.5">In</ion-col>
+        <ion-col size="1.5">Out</ion-col>
+        <ion-col size="1.5">Gross</ion-col>
+        <ion-col size="1.5">Break</ion-col>
+        <ion-col size="1.5">Net</ion-col>
+        <ion-col size="1.5">Status</ion-col>
+      </ion-row>
+      @for (r of rows(); track r.id || r.employeeId) {
+      <ion-row class="trow" (click)="openCorrect(r)">
+        <ion-col size="3">
+          {{ r.employeeName }}
+          @if (r.isManual) { <ion-badge color="warning">manual</ion-badge> }
+          @if (r.hasOpenSession) { <ion-badge color="danger">open</ion-badge> }
+        </ion-col>
+        <ion-col size="1.5">{{ fmtTime(r.firstIn) }}</ion-col>
+        <ion-col size="1.5">{{ fmtTime(r.lastOut) }}</ion-col>
+        <ion-col size="1.5">{{ fmtMin(r.grossMinutes) }}</ion-col>
+        <ion-col size="1.5">{{ fmtMin(r.breakMinutes) }}</ion-col>
+        <ion-col size="1.5">{{ fmtMin(r.netMinutes) }}</ion-col>
+        <ion-col size="1.5"><ion-badge [color]="statusColor(r.status)">{{ r.status }}</ion-badge></ion-col>
+      </ion-row>
+      }
+      @if (rows().length === 0) {
+      <ion-row><ion-col class="ion-text-center" color="medium">No records for this day.</ion-col></ion-row>
+      }
+    </ion-grid>
+  </div>
+  <ion-text color="medium"><p class="hint">Tap a row to make a manual correction.</p></ion-text>
+  }
+
+  <!-- ===== Manual correction modal ===== -->
+  <ion-modal [isOpen]="correctOpen()" (didDismiss)="closeCorrect()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Manual Correction</ion-title>
+          <ion-buttons slot="end"><ion-button (click)="closeCorrect()">Close</ion-button></ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-text><h2>{{ correctEmployeeName }} — {{ date }}</h2></ion-text>
+
+        <h3>Punches</h3>
+        @if (punchesLoading()) { <ion-spinner></ion-spinner> }
+        <ion-list>
+          @for (p of punches(); track p.id) {
+          <ion-item>
+            <ion-badge slot="start" [color]="p.direction === 'IN' ? 'success' : 'medium'">{{ p.direction }}</ion-badge>
+            <ion-label>
+              <h3>{{ fmtTime(p.timestamp) }}</h3>
+              <p>{{ p.source }} {{ p.note ? '· ' + p.note : '' }}</p>
+            </ion-label>
+            <ion-button slot="end" fill="clear" (click)="editPunch(p)">
+              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+            </ion-button>
+            <ion-button slot="end" fill="clear" color="danger" (click)="confirmDeletePunch(p)">
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+          }
+          @if (!punchesLoading() && punches().length === 0) {
+          <ion-text color="medium"><p>No punches.</p></ion-text>
+          }
+        </ion-list>
+
+        <h3>{{ editingPunchId == null ? 'Add Punch' : 'Edit Punch' }}</h3>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="6">
+              <ion-item>
+                <ion-input label="Time (HH:mm)" labelPlacement="stacked" placeholder="10:05" [(ngModel)]="punchTime"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="6">
+              <ion-item>
+                <ion-select label="Direction" labelPlacement="stacked" [(ngModel)]="punchDir">
+                  @for (d of directions; track d) { <ion-select-option [value]="d">{{ d }}</ion-select-option> }
+                </ion-select>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-item>
+                <ion-input label="Note" labelPlacement="stacked" [(ngModel)]="punchNote"></ion-input>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+        <ion-button expand="block" (click)="savePunch()" [disabled]="savingPunch()">
+          <ion-icon slot="start" name="save-outline"></ion-icon>
+          {{ editingPunchId == null ? 'Add Punch' : 'Update Punch' }}
+        </ion-button>
+        <ion-button expand="block" fill="outline" (click)="recompute()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon> Recompute from punches
+        </ion-button>
+
+        <h3 class="ion-margin-top">Day Override (isManual=true)</h3>
+        <ion-text color="medium"><p>Net/Status diya to wahi use hoga, calc ignore.</p></ion-text>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="6">
+              <ion-item>
+                <ion-input type="number" label="Net minutes" labelPlacement="stacked" [(ngModel)]="overrideNet"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="6">
+              <ion-item>
+                <ion-select label="Status" labelPlacement="stacked" [(ngModel)]="overrideStatus">
+                  <ion-select-option [value]="''">(auto)</ion-select-option>
+                  @for (s of statuses; track s) { <ion-select-option [value]="s">{{ s }}</ion-select-option> }
+                </ion-select>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-item>
+                <ion-input label="Manual note" labelPlacement="stacked" [(ngModel)]="overrideNote"></ion-input>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+        <ion-button expand="block" color="warning" (click)="saveOverride()" [disabled]="savingOverride()">
+          <ion-icon slot="start" name="build-outline"></ion-icon> Save Override
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

@@ -1,0 +1,28 @@
+# Render Blueprint: free PostgreSQL + Dockerized .NET 10 API.
+# Deploy via Render Dashboard -> New -> Blueprint, pointed at this repo.
+databases:
+  - name: attendance-db
+    plan: free
+    databaseName: attendance
+    user: attendance
+
+services:
+  - type: web
+    name: attendance-api
+    runtime: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    envVars:
+      # Wire Render Postgres connection string into DATABASE_URL.
+      # Program.cs -> DbConnectionHelper parses postgres:// into an Npgsql conn string.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: attendance-db
+          property: connectionString
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Optional: restrict CORS to your frontend origin(s), comma-separated.
+      # If unset, the API allows any origin.
+      # - key: FRONTEND_ORIGINS
+      #   value: https://your-frontend.example.com

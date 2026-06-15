@@ -1,0 +1,209 @@
+.kiosk-bg {
+  --background: linear-gradient(160deg, #1f2937 0%, #111827 100%);
+}
+
+.kiosk-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.cam-card,
+.code-card {
+  height: 100%;
+}
+
+.cam-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.cam-view {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-off {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.cam-off ion-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+}
+
+.hint {
+  font-size: 12px;
+  text-align: center;
+}
+
+.big {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.code-input {
+  font-size: 28px;
+  letter-spacing: 2px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.punch-btn {
+  margin-top: 16px;
+  --border-radius: 12px;
+  height: 64px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.msg {
+  text-align: center;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.howto {
+  font-size: 13px;
+  text-align: center;
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+
+.result-card {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.welcome ion-icon {
+  font-size: 28px;
+}
+
+.dir-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px auto 4px;
+  padding: 10px 22px;
+  border-radius: 14px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.dir-badge ion-icon {
+  font-size: 34px;
+}
+
+.dir-in {
+  background: var(--ion-color-success, #2dd36f);
+}
+
+.dir-out {
+  background: var(--ion-color-warning, #ff9f1c);
+}
+
+.punch-time {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.net {
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.srvmsg {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.confidence-chip {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 14px;
+}
+
+.blink-hint {
+  color: var(--ion-color-primary, #3880ff);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.blink-hint ion-icon {
+  font-size: 18px;
+}
+
+/* Prominent NON-EMPLOYEE card — sized like the success card, danger styled. */
+.nonemp-card {
+  margin-top: 18px;
+  text-align: center;
+  border: 2px solid var(--ion-color-danger, #eb445a);
+  --background: var(--ion-color-danger, #eb445a);
+  color: #fff;
+}
+
+.nonemp-card ion-card-content {
+  color: #fff;
+}
+
+.nonemp-icon ion-icon {
+  font-size: 64px;
+  color: #fff;
+}
+
+.nonemp-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 8px 0 6px;
+}
+
+.nonemp-sub {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  opacity: 0.95;
+}
+
+/* Public scanner footer login/signup links */
+.kiosk-login-link {
+  color: var(--ion-color-medium, #92949c);
+  font-size: 0.95rem;
+}
+.kiosk-login-link a {
+  color: var(--ion-color-primary, #3880ff);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}

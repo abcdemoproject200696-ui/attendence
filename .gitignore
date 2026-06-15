@@ -1,0 +1,41 @@
+# ===== Attendance project .gitignore (frontend Ionic/Angular + backend .NET) =====
+# Keeps this repo independent and clean. node_modules / build output never pushed.
+
+# ---- Node / Angular / Ionic (frontend) ----
+**/node_modules/
+frontend/www/
+frontend/.angular/
+frontend/dist/
+frontend/*.log
+npm-debug.log*
+
+# ---- Capacitor / Android (APK build output is huge; keep config, ignore build) ----
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/local.properties
+frontend/ios/
+
+# ---- .NET (backend) ----
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+
+# ---- Local dev database (data is in Postgres in prod; SQLite file is local-only) ----
+backend/**/attendance.db
+backend/**/attendance.db-shm
+backend/**/attendance.db-wal
+
+# ---- Editors / OS ----
+.vs/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Secrets (never commit) ----
+**/appsettings.*.Local.json
+.env
+.env.*

@@ -1,0 +1,19 @@
+.table-wrap {
+  overflow-x: auto;
+}
+
+.rep-table {
+  min-width: 640px;
+}
+
+.rep-table .thead {
+  font-weight: 700;
+  border-bottom: 2px solid var(--ion-color-step-200, #ccc);
+  font-size: 13px;
+}
+
+.rep-table .trow {
+  border-bottom: 1px solid var(--ion-color-step-100, #eee);
+  align-items: center;
+  font-size: 14px;
+}

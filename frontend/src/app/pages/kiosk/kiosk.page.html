@@ -1,0 +1,165 @@
+<ion-header>
+  <ion-toolbar color="dark">
+    @if (isLoggedIn()) {
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    }
+    <ion-title>Attendance — Punch In / Out</ion-title>
+    @if (!isLoggedIn()) {
+    <ion-buttons slot="end">
+      <ion-button (click)="goToLogin()">
+        <ion-icon slot="start" name="log-in-outline"></ion-icon> Login
+      </ion-button>
+    </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="kiosk-bg ion-padding">
+  <ion-grid class="kiosk-grid">
+    <ion-row class="ion-justify-content-center">
+      <ion-col size="12" size-md="6">
+        <ion-card class="cam-card">
+          <ion-card-content>
+            <div class="cam-wrap">
+              <video #video class="cam-view" playsinline muted></video>
+              <canvas #canvas hidden></canvas>
+              @if (!cameraOn()) {
+              <div class="cam-off">
+                <ion-icon name="camera-outline"></ion-icon>
+                <p>Camera off / not available.<br />Use employee CODE below.</p>
+              </div>
+              }
+            </div>
+            <!-- Auto-scan: no button needed — a face is detected and punched automatically. -->
+            <ion-text color="medium">
+              @if (modelsLoading()) {
+              <p class="hint"><ion-spinner name="dots"></ion-spinner> Loading face models…</p>
+              } @else if (!cameraOn()) {
+              <p class="hint">Camera off — use the employee CODE on the right.</p>
+              } @else if (!modelsReady()) {
+              <p class="hint">Face models not loaded — you can still punch by CODE.</p>
+              } @else if (autoScan()) {
+                @if (loading()) {
+                <p class="hint"><ion-spinner name="dots"></ion-spinner> Punching…</p>
+                } @else if (cooldown()) {
+                <p class="hint">✓ Done. Next person — please look at the camera.</p>
+                } @else if (awaitingBlink()) {
+                <p class="hint blink-hint"><ion-icon name="eye-outline"></ion-icon> Please blink to confirm.</p>
+                } @else if (scanning()) {
+                <p class="hint"><ion-spinner name="dots"></ion-spinner> Scanning…</p>
+                } @else if (requireLiveness()) {
+                <p class="hint">Auto-scan ON — look at the camera, then blink to punch.</p>
+                } @else {
+                <p class="hint">Auto-scan ON — just look at the camera to punch.</p>
+                }
+              } @else {
+              <p class="hint">Auto-scan OFF — tap SCAN FACE to punch.</p>
+              }
+            </ion-text>
+
+            <ion-item lines="none" class="auto-toggle">
+              <ion-toggle [checked]="autoScan()" (ionChange)="toggleAutoScan()">Auto-scan</ion-toggle>
+            </ion-item>
+
+            @if (!autoScan()) {
+            <ion-button
+              expand="block"
+              size="large"
+              class="punch-btn"
+              (click)="scanFace()"
+              [disabled]="!cameraOn() || scanning() || loading() || modelsLoading()"
+            >
+              @if (scanning() || loading()) {
+              <ion-spinner name="crescent"></ion-spinner>
+              } @else {
+              <ion-icon slot="start" name="scan-outline"></ion-icon> SCAN FACE
+              }
+            </ion-button>
+            }
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="code-card">
+          <ion-card-content>
+            <h2 class="big">Attendance</h2>
+            @if (!result() && !nonEmployee() && !error()) {
+            <ion-text color="medium">
+              <p class="howto">Look at the camera to punch <strong>IN</strong> or <strong>OUT</strong>.</p>
+            </ion-text>
+            }
+
+            @if (error()) {
+            <ion-text color="danger"><p class="msg">{{ error() }}</p></ion-text>
+            }
+
+            <!-- Prominent NON-EMPLOYEE card: FACE scan returned no match. No punch recorded. -->
+            @if (nonEmployee()) {
+            <ion-card class="nonemp-card">
+              <ion-card-content>
+                <div class="nonemp-icon">
+                  <ion-icon name="person-remove-outline"></ion-icon>
+                </div>
+                <div class="nonemp-title">NON-EMPLOYEE</div>
+                <p class="nonemp-sub">Unknown person — not registered.</p>
+                @if (!isLoggedIn()) {
+                <p class="nonemp-sub">Taking you to Sign Up…</p>
+                <ion-button expand="block" (click)="goToSignup()">
+                  <ion-icon slot="start" name="person-add-outline"></ion-icon> Sign Up now
+                </ion-button>
+                <ion-button expand="block" fill="clear" color="light" (click)="goToLogin()">
+                  Already registered? Login
+                </ion-button>
+                } @else {
+                <p class="nonemp-sub">Please enroll this person or use their code.</p>
+                }
+              </ion-card-content>
+            </ion-card>
+            }
+
+            @if (result(); as r) {
+            <ion-card class="result-card">
+              <ion-card-content>
+                <div class="welcome">
+                  <ion-icon name="checkmark-circle" color="success"></ion-icon>
+                  <span>{{ r.punch.employeeName }}</span>
+                </div>
+                @if (r.punch.employeeCode) {
+                <p class="emp-id">ID: <strong>{{ r.punch.employeeCode }}</strong></p>
+                }
+                <div class="dir-badge" [class.dir-in]="r.punch.direction === 'IN'" [class.dir-out]="r.punch.direction === 'OUT'">
+                  <ion-icon [name]="r.punch.direction === 'IN' ? 'log-in-outline' : 'log-out-outline'"></ion-icon>
+                  <span>{{ r.punch.direction === 'IN' ? 'CHECKED IN' : 'CHECKED OUT' }}</span>
+                </div>
+                <p class="punch-time">{{ fmtTime(r.punch.timestamp) }}</p>
+                <!-- Match confidence: only for FACE punches that returned it. -->
+                @if (r.punch.source === 'Face' && r.matchConfidence != null) {
+                <ion-badge class="confidence-chip" color="success">Matched {{ r.matchConfidence }}%</ion-badge>
+                }
+                <p class="net">Today Net: <strong>{{ fmt(r.todayNetMinutes) }}</strong></p>
+                <p class="srvmsg">{{ r.message }}</p>
+              </ion-card-content>
+            </ion-card>
+            }
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    @if (!isLoggedIn()) {
+    <ion-row class="ion-justify-content-center">
+      <ion-col size="12" class="ion-text-center">
+        <p class="kiosk-login-link">
+          Staff / Admin?
+          <a (click)="goToLogin()">Login here</a>
+          &nbsp;·&nbsp; New?
+          <a (click)="goToSignup()">Sign up</a>
+        </p>
+      </ion-col>
+    </ion-row>
+    }
+  </ion-grid>
+</ion-content>

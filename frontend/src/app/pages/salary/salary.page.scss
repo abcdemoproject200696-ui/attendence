@@ -1,0 +1,61 @@
+.lock-card,
+.salary-card {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.lock-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg {
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.gate-note {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.att-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.breakdown {
+  margin-bottom: 16px;
+}
+
+.brow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--ion-color-light-shade, #e0e0e0);
+  font-size: 15px;
+}
+
+.brow.loss strong {
+  color: var(--ion-color-danger, #eb445a);
+}
+
+.brow.net {
+  margin-top: 8px;
+  border: none;
+  background: var(--ion-color-success-tint, #42d77d);
+  color: #fff;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.brow.net strong {
+  font-size: 24px;
+}

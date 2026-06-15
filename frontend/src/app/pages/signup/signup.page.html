@@ -1,0 +1,30 @@
+<ion-content class="signup-content ion-padding">
+  <div class="signup-wrap">
+    <ion-card class="signup-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="person-add-outline"></ion-icon> Create Account
+        </ion-card-title>
+        <ion-card-subtitle>Sign up to use the Attendance system</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <app-employee-form
+          #employeeForm
+          [passwordRequired]="true"
+          [showCodeRow]="false"
+          (formSubmit)="onSubmit($event)"
+        ></app-employee-form>
+
+        <ion-button expand="block" class="signup-btn" (click)="triggerSave()" [disabled]="saving()">
+          @if (saving()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+          <ion-icon slot="start" name="person-add-outline"></ion-icon> Sign Up }
+        </ion-button>
+
+        <p class="signup-login-link">
+          Already have an account?
+          <a routerLink="/login">Log in</a>
+        </p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

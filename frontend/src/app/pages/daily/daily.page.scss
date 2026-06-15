@@ -1,0 +1,28 @@
+.table-wrap {
+  overflow-x: auto;
+}
+
+.att-table {
+  min-width: 720px;
+}
+
+.att-table .thead {
+  font-weight: 700;
+  border-bottom: 2px solid var(--ion-color-step-200, #ccc);
+  font-size: 13px;
+}
+
+.att-table .trow {
+  border-bottom: 1px solid var(--ion-color-step-100, #eee);
+  cursor: pointer;
+  align-items: center;
+  font-size: 14px;
+}
+
+.att-table .trow:hover {
+  background: var(--ion-color-step-50, #f5f5f5);
+}
+
+.hint {
+  font-size: 12px;
+}

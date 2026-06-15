@@ -1,0 +1,107 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Leaves</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openNew()"><ion-icon slot="start" name="add-outline"></ion-icon> Apply</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row class="ion-align-items-center">
+      <ion-col size="8" size-md="4">
+        <ion-item>
+          <ion-select label="Filter Employee" labelPlacement="stacked" [(ngModel)]="filterEmployeeId" (ionChange)="load()">
+            <ion-select-option [value]="null">All</ion-select-option>
+            @for (e of employees(); track e.id) {
+            <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+      </ion-col>
+      <ion-col size="4" size-md="2">
+        <ion-button expand="block" (click)="load()" [disabled]="loading()">Load</ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  @if (loading()) { <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div> }
+  @if (error()) { <ion-text color="danger"><p>{{ error() }}</p></ion-text> }
+
+  @if (!loading() && !error()) {
+  <ion-list>
+    @for (l of leaves(); track l.id) {
+    <ion-item>
+      <ion-icon slot="start" name="airplane-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ l.employeeName || employeeName(l.employeeId) }}
+          <ion-badge color="medium">{{ l.type }}</ion-badge>
+        </h2>
+        <p>{{ l.fromDate }} → {{ l.toDate }}</p>
+        <p>{{ l.reason }}</p>
+      </ion-label>
+      <ion-badge slot="end" [color]="statusColor(l.status)">{{ l.status }}</ion-badge>
+      <ion-toggle slot="end" [checked]="l.isPaid" (ionChange)="togglePaid(l)">Paid</ion-toggle>
+      @if (l.status === 'Pending') {
+      <ion-button slot="end" fill="clear" color="success" (click)="setStatus(l, 'Approved')">
+        <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+      </ion-button>
+      <ion-button slot="end" fill="clear" color="danger" (click)="setStatus(l, 'Rejected')">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+      }
+      <ion-button slot="end" fill="clear" color="medium" (click)="confirmDelete(l)">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    }
+    @if (leaves().length === 0) {
+    <ion-text color="medium"><p class="ion-text-center">No leave requests.</p></ion-text>
+    }
+  </ion-list>
+  }
+
+  <ion-modal [isOpen]="modalOpen()" (didDismiss)="closeModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Apply Leave</ion-title>
+          <ion-buttons slot="end"><ion-button (click)="closeModal()">Close</ion-button></ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-select label="Employee *" labelPlacement="stacked" [(ngModel)]="form.employeeId">
+            @for (e of employees(); track e.id) {
+            <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input type="date" label="From *" labelPlacement="stacked" [(ngModel)]="form.fromDate"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input type="date" label="To *" labelPlacement="stacked" [(ngModel)]="form.toDate"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-select label="Type" labelPlacement="stacked" [(ngModel)]="form.type">
+            @for (t of leaveTypes; track t) { <ion-select-option [value]="t">{{ t }}</ion-select-option> }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-toggle [(ngModel)]="form.isPaid">Paid Leave</ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-input label="Reason" labelPlacement="stacked" [(ngModel)]="form.reason"></ion-input>
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="apply()" [disabled]="saving()">
+          @if (saving()) { <ion-spinner name="crescent"></ion-spinner> } @else { Apply }
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

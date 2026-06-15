@@ -1,0 +1,106 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Dashboard</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="load()" [disabled]="loading()">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="load($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <ion-text color="medium">
+    <p>Aaj: <strong>{{ date }}</strong></p>
+  </ion-text>
+
+  @if (loading()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner></ion-spinner>
+  </div>
+  }
+
+  @if (error()) {
+  <ion-card color="danger">
+    <ion-card-content>{{ error() }}</ion-card-content>
+  </ion-card>
+  }
+
+  @if (!loading() && !error()) {
+  <ion-grid>
+    <ion-row>
+      <ion-col size="6" size-md="3">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle><ion-icon name="people-outline"></ion-icon> Employees</ion-card-subtitle>
+            <ion-card-title>{{ totalEmployees() }}</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <ion-card color="success">
+          <ion-card-header>
+            <ion-card-subtitle><ion-icon name="checkmark-circle-outline"></ion-icon> Present</ion-card-subtitle>
+            <ion-card-title>{{ present() }}</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <ion-card color="warning">
+          <ion-card-header>
+            <ion-card-subtitle><ion-icon name="time-outline"></ion-icon> Half / Leave</ion-card-subtitle>
+            <ion-card-title>{{ halfDay() }} / {{ onLeave() }}</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <ion-card color="danger">
+          <ion-card-header>
+            <ion-card-subtitle><ion-icon name="close-circle-outline"></ion-icon> Absent</ion-card-subtitle>
+            <ion-card-title>{{ absent() }}</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Total Net Hours (aaj)</ion-card-subtitle>
+            <ion-card-title>{{ fmt(totalNet()) }}</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            {{ days().length }} employees ke aaj ke records.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col size="12" size-md="4">
+        <ion-button expand="block" routerLink="/kiosk">
+          <ion-icon slot="start" name="scan-outline"></ion-icon> Open Attendance
+        </ion-button>
+      </ion-col>
+      <ion-col size="12" size-md="4">
+        <ion-button expand="block" fill="outline" routerLink="/daily">
+          <ion-icon slot="start" name="calendar-outline"></ion-icon> Daily Attendance
+        </ion-button>
+      </ion-col>
+      <ion-col size="12" size-md="4">
+        <ion-button expand="block" fill="outline" routerLink="/report">
+          <ion-icon slot="start" name="document-text-outline"></ion-icon> Monthly Report
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  }
+</ion-content>

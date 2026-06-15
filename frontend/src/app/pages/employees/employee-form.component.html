@@ -1,0 +1,184 @@
+<ion-list>
+  @if (showCodeRow) {
+    @if (editingId == null) {
+    <ion-item>
+      <ion-input label="Code" labelPlacement="stacked" [value]="'(auto)'" readonly></ion-input>
+      <ion-note slot="helper">Code is auto-generated (EMP00X).</ion-note>
+    </ion-item>
+    } @else {
+    <ion-item>
+      <ion-input label="Code" labelPlacement="stacked" [(ngModel)]="form.code" readonly></ion-input>
+    </ion-item>
+    }
+  }
+  <ion-item>
+    <ion-input label="Name *" labelPlacement="stacked" [(ngModel)]="form.name"></ion-input>
+  </ion-item>
+  @if (submitted() && !form.name.trim()) {
+  <ion-text color="danger"><p class="field-err">Name is required.</p></ion-text>
+  }
+  <ion-item>
+    <ion-select
+      label="Role *"
+      labelPlacement="stacked"
+      [ngModel]="form.roleId"
+      (ngModelChange)="setRoleId($event)"
+    >
+      @for (r of roleOptions(); track r.id) {
+      <ion-select-option [value]="r.id">
+        {{ r.name }}@if (!r.isActive) { (inactive)}
+      </ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  @if (submitted() && !form.roleId) {
+  <ion-text color="danger"><p class="field-err">Role is required.</p></ion-text>
+  }
+  <ion-item>
+    <ion-input
+      label="Email *"
+      type="email"
+      inputmode="email"
+      labelPlacement="stacked"
+      [(ngModel)]="form.email"
+      placeholder="name@example.com"
+    ></ion-input>
+  </ion-item>
+  @if (submitted() && !emailOk()) {
+  <ion-text color="danger"><p class="field-err">Enter a valid email (e.g. name&#64;example.com).</p></ion-text>
+  }
+  <ion-item>
+    <ion-input
+      label="Phone *"
+      type="tel"
+      inputmode="numeric"
+      maxlength="10"
+      labelPlacement="stacked"
+      [(ngModel)]="form.phone"
+      placeholder="10-digit mobile"
+    ></ion-input>
+  </ion-item>
+  @if (submitted() && !phoneOk()) {
+  <ion-text color="danger"><p class="field-err">Enter a valid 10-digit mobile number (starts with 6-9).</p></ion-text>
+  }
+  <ion-item>
+    <ion-select label="Shift *" labelPlacement="stacked" [(ngModel)]="form.shiftId">
+      @for (s of shifts(); track s.id) {
+      <ion-select-option [value]="s.id">{{ s.name }} ({{ s.shiftStart }}-{{ s.shiftEnd }})</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  @if (submitted() && !form.shiftId) {
+  <ion-text color="danger"><p class="field-err">Shift is required.</p></ion-text>
+  }
+  <ion-item>
+    <ion-input
+      label="Monthly Salary (₹) *"
+      labelPlacement="stacked"
+      type="number"
+      min="1"
+      [(ngModel)]="form.monthlySalary"
+      placeholder="55000"
+    ></ion-input>
+  </ion-item>
+  @if (submitted() && (form.monthlySalary == null || form.monthlySalary <= 0)) {
+  <ion-text color="danger"><p class="field-err">Monthly salary is required.</p></ion-text>
+  }
+  <ion-item>
+    <ion-input
+      [label]="passwordLabel"
+      labelPlacement="stacked"
+      [type]="showPassword() ? 'text' : 'password'"
+      autocomplete="new-password"
+      [(ngModel)]="form.password"
+      [placeholder]="passwordPlaceholder"
+    ></ion-input>
+    <ion-button
+      slot="end"
+      fill="clear"
+      class="pw-toggle"
+      (click)="showPassword.set(!showPassword())"
+      [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+    >
+      <ion-icon slot="icon-only" [name]="showPassword() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+    </ion-button>
+    <ion-note slot="helper">
+      @if (passwordIsRequired) { Required — used with the employee code to sign in. }
+      @else { Leave blank to keep the existing password. }
+    </ion-note>
+  </ion-item>
+  @if (submitted() && passwordIsRequired && !(form.password && form.password.trim())) {
+  <ion-text color="danger"><p class="field-err">Password is required.</p></ion-text>
+  }
+  <ion-item>
+    <ion-toggle [(ngModel)]="form.isActive">Active</ion-toggle>
+  </ion-item>
+</ion-list>
+
+<div class="enroll-section ion-padding-vertical">
+  <ion-label>
+    <h3>Enroll Face <ion-text color="medium"><small>(optional)</small></ion-text></h3>
+  </ion-label>
+  <ion-text color="medium">
+    <p class="enroll-hint">
+      Capture {{ minFaces }} (up to {{ maxFaces }}) photos from slightly different angles / expressions for better accuracy.
+    </p>
+  </ion-text>
+
+  @if (existingFaceCount() > 0 && capturedFaces().length === 0) {
+  <ion-text color="success">
+    <p>
+      <ion-icon name="checkmark-circle"></ion-icon>
+      Face enrolled ({{ existingFaceCount() }} {{ existingFaceCount() === 1 ? 'photo' : 'photos' }})
+    </p>
+  </ion-text>
+  <ion-button expand="block" fill="outline" (click)="recaptureFace()" [disabled]="enrollBusy()">
+    <ion-icon slot="start" name="refresh-outline"></ion-icon> Re-enroll Face
+  </ion-button>
+  } @else {
+
+  <div class="enroll-cam-wrap" [hidden]="!cameraOn()">
+    <video #enrollVideo class="enroll-cam" autoplay playsinline muted></video>
+  </div>
+
+  @if (capturedFaces().length > 0) {
+  <ion-text [color]="capturedFaces().length >= minFaces ? 'success' : 'medium'">
+    <p class="enroll-progress">
+      <ion-icon name="checkmark-circle"></ion-icon>
+      Captured {{ capturedFaces().length }} of {{ maxFaces }}
+      @if (capturedFaces().length >= maxFaces) {
+      — Maximum {{ maxFaces }} captured
+      } @else if (capturedFaces().length < minFaces) {
+      — capture at least {{ minFaces }} for best accuracy
+      }
+    </p>
+  </ion-text>
+  }
+
+  @if (cameraOn()) {
+  <ion-button
+    expand="block"
+    (click)="captureFace()"
+    [disabled]="enrollBusy() || capturedFaces().length >= maxFaces"
+  >
+    @if (enrollBusy()) { <ion-spinner name="crescent"></ion-spinner> } @else if
+    (capturedFaces().length >= maxFaces) { Maximum {{ maxFaces }} captured } @else {
+    <ion-icon slot="start" name="camera-outline"></ion-icon>
+    Capture ({{ capturedFaces().length }}/{{ maxFaces }})
+    }
+  </ion-button>
+  } @else {
+  <ion-button expand="block" fill="outline" (click)="startEnrollCamera()" [disabled]="enrollBusy()">
+    @if (enrollBusy()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+    <ion-icon slot="start" name="camera-outline"></ion-icon> Start Camera
+    }
+  </ion-button>
+  }
+
+  @if (capturedFaces().length > 0) {
+  <ion-button expand="block" fill="clear" color="medium" (click)="clearCaptures()" [disabled]="enrollBusy()">
+    <ion-icon slot="start" name="refresh-outline"></ion-icon> Clear / Reset
+  </ion-button>
+  }
+  }
+</div>

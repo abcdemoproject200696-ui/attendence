@@ -1,0 +1,139 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Settings (Admin)</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (!unlocked()) {
+  <!-- ===== Admin PIN gate (basic client-side gate, NOT real auth) ===== -->
+  <ion-card class="lock-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="lock-closed-outline"></ion-icon> Admin PIN
+      </ion-card-title>
+      <ion-card-subtitle>Settings are for admins only. Enter the PIN.</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-input
+          label="PIN"
+          labelPlacement="stacked"
+          type="password"
+          inputmode="numeric"
+          [(ngModel)]="pin"
+          (keyup.enter)="unlock()"
+          placeholder="••••••"
+        ></ion-input>
+      </ion-item>
+      @if (pinError()) {
+      <ion-text color="danger"><p class="msg">{{ pinError() }}</p></ion-text>
+      }
+      <ion-button expand="block" (click)="unlock()">
+        <ion-icon slot="start" name="lock-closed-outline"></ion-icon> Unlock
+      </ion-button>
+      <ion-note class="gate-note">Basic client-side gate — not real authentication.</ion-note>
+    </ion-card-content>
+  </ion-card>
+  } @else {
+  <!-- ===== Settings content ===== -->
+  @if (loading()) {
+  <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+  }
+  @if (error()) {
+  <ion-text color="danger"><p class="msg">{{ error() }}</p></ion-text>
+  }
+
+  @if (setting()) {
+  <ion-card class="settings-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="settings-outline"></ion-icon> Face Recognition
+      </ion-card-title>
+      <ion-card-subtitle>Global kiosk settings</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <!-- Face match threshold -->
+      <div class="field">
+        <ion-label class="field-label">
+          Face match threshold: <strong>{{ thresholdLabel() }}</strong>
+        </ion-label>
+        <ion-range
+          [min]="minThreshold"
+          [max]="maxThreshold"
+          [step]="0.01"
+          [value]="threshold()"
+          [pin]="true"
+          (ionChange)="onThresholdChange($any($event.detail.value))"
+        >
+          <ion-label slot="start">{{ minThreshold }}</ion-label>
+          <ion-label slot="end">{{ maxThreshold }}</ion-label>
+        </ion-range>
+        <ion-note class="helper">
+          Lower = stricter (fewer false matches), higher = more lenient.
+        </ion-note>
+      </div>
+
+      <!-- Require liveness (blink) -->
+      <div class="field">
+        <ion-item lines="none" class="toggle-item">
+          <ion-toggle
+            [checked]="requireLiveness()"
+            (ionChange)="onLivenessChange($event.detail.checked)"
+          >
+            Require liveness (blink)
+          </ion-toggle>
+        </ion-item>
+        <ion-note class="helper">
+          When ON, the kiosk requires a blink before punching (anti photo-spoof). Experimental.
+        </ion-note>
+      </div>
+
+      <ion-button expand="block" color="success" (click)="save()" [disabled]="saving()">
+        @if (saving()) {
+        <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+        <ion-icon slot="start" name="save-outline"></ion-icon> Save Settings
+        }
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- ===== Employee Roles ===== -->
+  <ion-card class="settings-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="settings-outline"></ion-icon> Employee Roles
+      </ion-card-title>
+      <ion-card-subtitle>Checked roles appear in the Add Employee role dropdown.</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      @if (rolesLoading()) {
+      <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+      }
+      @if (rolesError()) {
+      <ion-text color="danger"><p class="msg">{{ rolesError() }}</p></ion-text>
+      }
+      @if (!rolesLoading() && !rolesError()) {
+      <ion-list>
+        @for (role of roles(); track role.id) {
+        <ion-item lines="full">
+          <ion-toggle
+            [checked]="role.isActive"
+            [disabled]="isRoleSaving(role.id)"
+            (ionChange)="onRoleToggle(role, $event.detail.checked)"
+          >
+            {{ role.name }}
+          </ion-toggle>
+        </ion-item>
+        }
+      </ion-list>
+      }
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>

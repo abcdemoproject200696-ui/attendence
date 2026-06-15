@@ -1,0 +1,78 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Holidays</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openNew()"><ion-icon slot="start" name="add-outline"></ion-icon> Add</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row class="ion-align-items-center">
+      <ion-col size="6" size-md="3">
+        <ion-item>
+          <ion-input type="number" label="Year" labelPlacement="stacked" [(ngModel)]="year" (ionChange)="load()"></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="6" size-md="2">
+        <ion-button expand="block" (click)="load()" [disabled]="loading()">Load</ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  @if (loading()) { <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div> }
+  @if (error()) { <ion-text color="danger"><p>{{ error() }}</p></ion-text> }
+
+  @if (!loading() && !error()) {
+  <ion-list>
+    @for (h of holidays(); track h.id) {
+    <ion-item>
+      <ion-icon slot="start" name="sunny-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ h.name }}</h2>
+        <p>{{ h.date }}</p>
+      </ion-label>
+      <ion-toggle slot="end" [checked]="h.isPaid" (ionChange)="togglePaid(h)">Paid</ion-toggle>
+      <ion-button slot="end" fill="clear" (click)="openEdit(h)">
+        <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+      </ion-button>
+      <ion-button slot="end" fill="clear" color="danger" (click)="confirmDelete(h)">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    }
+    @if (holidays().length === 0) {
+    <ion-text color="medium"><p class="ion-text-center">No holidays for this year.</p></ion-text>
+    }
+  </ion-list>
+  }
+
+  <ion-modal [isOpen]="modalOpen()" (didDismiss)="closeModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ editingId == null ? 'Add Holiday' : 'Edit Holiday' }}</ion-title>
+          <ion-buttons slot="end"><ion-button (click)="closeModal()">Close</ion-button></ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input type="date" label="Date *" labelPlacement="stacked" [(ngModel)]="form.date"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input label="Name *" labelPlacement="stacked" [(ngModel)]="form.name" placeholder="Diwali"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-toggle [(ngModel)]="form.isPaid">Paid Holiday</ion-toggle>
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="save()" [disabled]="saving()">
+          @if (saving()) { <ion-spinner name="crescent"></ion-spinner> } @else { Save }
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

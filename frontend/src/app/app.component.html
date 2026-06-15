@@ -1,0 +1,48 @@
+<ion-app>
+  <ion-split-pane contentId="main-content" [disabled]="!auth.currentUser()">
+    <ion-menu contentId="main-content" type="overlay" [disabled]="!auth.currentUser()">
+      <ion-content>
+        <ion-list lines="none">
+          <ion-list-header>Attendance</ion-list-header>
+          <ion-note>Face-Scanner System</ion-note>
+
+          @if (auth.currentUser(); as user) {
+          <div class="user-box">
+            <ion-icon name="person-circle-outline" class="user-avatar"></ion-icon>
+            <div class="user-meta">
+              <strong>{{ user.name }}</strong>
+              <ion-text color="medium"><small>{{ user.roleName }} · {{ user.code }}</small></ion-text>
+            </div>
+          </div>
+          }
+
+          @for (p of appPages(); track p.url) {
+          <ion-menu-toggle [autoHide]="false">
+            <ion-item
+              [routerLink]="[p.url]"
+              routerLinkActive="selected"
+              routerDirection="root"
+              lines="none"
+              detail="false"
+            >
+              <ion-icon slot="start" [name]="p.icon"></ion-icon>
+              <ion-label>{{ p.title }}</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+          }
+
+          @if (auth.currentUser()) {
+          <ion-menu-toggle [autoHide]="false">
+            <ion-item button="true" lines="none" detail="false" (click)="logout()">
+              <ion-icon slot="start" name="log-out-outline" color="danger"></ion-icon>
+              <ion-label color="danger">Logout</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+          }
+        </ion-list>
+      </ion-content>
+    </ion-menu>
+
+    <ion-router-outlet id="main-content"></ion-router-outlet>
+  </ion-split-pane>
+</ion-app>

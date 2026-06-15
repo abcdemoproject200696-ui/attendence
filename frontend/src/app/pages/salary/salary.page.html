@@ -1,0 +1,124 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Salary (Admin)</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (!unlocked()) {
+  <!-- ===== Admin PIN gate (basic client-side gate, NOT real auth) ===== -->
+  <ion-card class="lock-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="lock-closed-outline"></ion-icon> Admin PIN
+      </ion-card-title>
+      <ion-card-subtitle>Salary is for admins only. Enter the PIN.</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-input
+          label="PIN"
+          labelPlacement="stacked"
+          type="password"
+          inputmode="numeric"
+          [(ngModel)]="pin"
+          (keyup.enter)="unlock()"
+          placeholder="••••••"
+        ></ion-input>
+      </ion-item>
+      @if (pinError()) {
+      <ion-text color="danger"><p class="msg">{{ pinError() }}</p></ion-text>
+      }
+      <ion-button expand="block" (click)="unlock()">
+        <ion-icon slot="start" name="lock-closed-outline"></ion-icon> Unlock
+      </ion-button>
+      <ion-note class="gate-note">Basic client-side gate — not real authentication.</ion-note>
+    </ion-card-content>
+  </ion-card>
+  } @else {
+  <!-- ===== Salary content ===== -->
+  <ion-grid>
+    <ion-row class="ion-align-items-end">
+      <ion-col size="12" size-md="5">
+        <ion-item button="true" (click)="monthPickerOpen.set(true)">
+          <ion-icon slot="start" name="calendar-outline"></ion-icon>
+          <ion-label>
+            <p>Month</p>
+            <h3>{{ month }}</h3>
+          </ion-label>
+        </ion-item>
+      </ion-col>
+      <ion-col size="12" size-md="5">
+        <ion-item>
+          <ion-select label="Employee" labelPlacement="stacked" [(ngModel)]="employeeId">
+            @for (e of employees(); track e.id) {
+            <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+      </ion-col>
+      <ion-col size="12" size-md="2">
+        <ion-button expand="block" (click)="generate()" [disabled]="loading()">
+          <ion-icon slot="start" name="cash-outline"></ion-icon> Load
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  @if (loading()) {
+  <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+  }
+  @if (error()) {
+  <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+  }
+
+  @if (report(); as r) {
+  <ion-card class="salary-card">
+    <ion-card-header>
+      <ion-card-subtitle>{{ r.month }}</ion-card-subtitle>
+      <ion-card-title>{{ r.employeeName }} <ion-badge color="medium">{{ employeeCode() }}</ion-badge></ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <!-- Attendance summary -->
+      <div class="att-summary">
+        <ion-badge color="success">Present {{ r.summary.presentDays }}</ion-badge>
+        <ion-badge color="warning">Half {{ r.summary.halfDays }}</ion-badge>
+        <ion-badge color="danger">Absent {{ r.summary.absentDays }}</ion-badge>
+        <ion-badge color="primary">Leaves {{ r.summary.paidLeaves + r.summary.unpaidLeaves }}</ion-badge>
+      </div>
+
+      <!-- Salary breakdown -->
+      <div class="breakdown">
+        <div class="brow"><span>Monthly Salary</span><strong>{{ inr(r.summary.monthlySalary) }}</strong></div>
+        <div class="brow"><span>Total Days In Month</span><strong>{{ r.summary.totalDaysInMonth }}</strong></div>
+        <div class="brow"><span>Per Day Salary</span><strong>{{ inr(r.summary.perDaySalary) }}</strong></div>
+        <div class="brow"><span>Payable Days</span><strong>{{ r.summary.payableDays }}</strong></div>
+        <div class="brow"><span>Earned Salary</span><strong>{{ inr(r.summary.earnedSalary) }}</strong></div>
+        <div class="brow loss"><span>Loss Of Pay</span><strong>- {{ inr(r.summary.lossOfPay) }}</strong></div>
+        <div class="brow net"><span>NET PAYABLE</span><strong>{{ inr(r.summary.netPayable) }}</strong></div>
+      </div>
+
+      <ion-button expand="block" color="success" (click)="exportSlipPdf()">
+        <ion-icon slot="start" name="download-outline"></ion-icon> Export Salary Slip PDF
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+  }
+
+  <!-- Month picker modal (month-year only) -->
+  <ion-modal [isOpen]="monthPickerOpen()" (didDismiss)="monthPickerOpen.set(false)">
+    <ng-template>
+      <ion-content class="ion-padding ion-text-center">
+        <ion-datetime
+          presentation="month-year"
+          [value]="monthForDatetime"
+          (ionChange)="onMonthSelected($any($event.detail.value))"
+        ></ion-datetime>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

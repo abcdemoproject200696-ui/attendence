@@ -1,0 +1,92 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Monthly Report</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row class="ion-align-items-center">
+      <ion-col size="6" size-md="3">
+        <ion-item>
+          <ion-input type="month" label="Month" labelPlacement="stacked" [(ngModel)]="month"></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="6" size-md="4">
+        <ion-item>
+          <ion-select label="Employee" labelPlacement="stacked" [(ngModel)]="employeeId">
+            @for (e of employees(); track e.id) {
+            <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+      </ion-col>
+      <ion-col size="6" size-md="2">
+        <ion-button expand="block" (click)="generate()" [disabled]="loading()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon> Generate
+        </ion-button>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <ion-button expand="block" color="success" (click)="exportPdf()" [disabled]="!report()">
+          <ion-icon slot="start" name="download-outline"></ion-icon> Export PDF
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  @if (loading()) {
+  <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+  }
+  @if (error()) {
+  <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+  }
+
+  @if (report(); as r) {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-subtitle>{{ r.employeeName }} · {{ r.month }}</ion-card-subtitle>
+      <ion-card-title>Summary</ion-card-title>
+    </ion-card-header>
+  </ion-card>
+
+  <ion-grid>
+    <ion-row>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Present</ion-card-subtitle><ion-card-title>{{ r.summary.presentDays }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Half Days</ion-card-subtitle><ion-card-title>{{ r.summary.halfDays }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Absent</ion-card-subtitle><ion-card-title>{{ r.summary.absentDays }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Weekly Offs</ion-card-subtitle><ion-card-title>{{ r.summary.weeklyOffs }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Paid Holidays</ion-card-subtitle><ion-card-title>{{ r.summary.paidHolidays }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Paid Leaves</ion-card-subtitle><ion-card-title>{{ r.summary.paidLeaves }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card><ion-card-header><ion-card-subtitle>Total Net</ion-card-subtitle><ion-card-title>{{ fmtMin(r.summary.totalNetMinutes) }}</ion-card-title></ion-card-header></ion-card></ion-col>
+      <ion-col size="6" size-md="3"><ion-card color="success"><ion-card-header><ion-card-subtitle>Payable Days</ion-card-subtitle><ion-card-title>{{ r.summary.payableDays }}</ion-card-title></ion-card-header></ion-card></ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <h3>Day-wise</h3>
+  <div class="table-wrap">
+    <ion-grid class="rep-table">
+      <ion-row class="thead">
+        <ion-col size="2.5">Date</ion-col>
+        <ion-col size="1.5">In</ion-col>
+        <ion-col size="1.5">Out</ion-col>
+        <ion-col size="1.5">Gross</ion-col>
+        <ion-col size="1.5">Net</ion-col>
+        <ion-col size="3.5">Status</ion-col>
+      </ion-row>
+      @for (d of r.days; track d.date) {
+      <ion-row class="trow">
+        <ion-col size="2.5">{{ d.date }}</ion-col>
+        <ion-col size="1.5">{{ fmtTime(d.firstIn) }}</ion-col>
+        <ion-col size="1.5">{{ fmtTime(d.lastOut) }}</ion-col>
+        <ion-col size="1.5">{{ fmtMin(d.grossMinutes) }}</ion-col>
+        <ion-col size="1.5">{{ fmtMin(d.netMinutes) }}</ion-col>
+        <ion-col size="3.5"><ion-badge [color]="statusColor(d.status)">{{ d.status }}</ion-badge></ion-col>
+      </ion-row>
+      }
+    </ion-grid>
+  </div>
+  }
+</ion-content>

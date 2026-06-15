@@ -1,0 +1,59 @@
+<ion-content class="login-content ion-padding">
+  <div class="login-wrap">
+    <ion-card class="login-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="log-in-outline"></ion-icon> Attendance
+        </ion-card-title>
+        <ion-card-subtitle>Sign in to continue</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item lines="full">
+          <ion-icon slot="start" name="person-outline" aria-hidden="true"></ion-icon>
+          <ion-input
+            label="Employee Code"
+            labelPlacement="stacked"
+            autocomplete="username"
+            [(ngModel)]="code"
+            (keyup.enter)="login()"
+            placeholder="EMP001"
+          ></ion-input>
+        </ion-item>
+        <ion-item lines="full">
+          <ion-icon slot="start" name="lock-closed-outline" aria-hidden="true"></ion-icon>
+          <ion-input
+            label="Password"
+            labelPlacement="stacked"
+            [type]="showPassword() ? 'text' : 'password'"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            (keyup.enter)="login()"
+            placeholder="••••••••"
+          ></ion-input>
+          <ion-button
+            slot="end"
+            fill="clear"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          >
+            <ion-icon slot="icon-only" [name]="showPassword() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </ion-button>
+        </ion-item>
+
+        @if (error()) {
+        <ion-text color="danger"><p class="login-error">{{ error() }}</p></ion-text>
+        }
+
+        <ion-button expand="block" class="login-btn" (click)="login()" [disabled]="loading()">
+          @if (loading()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+          <ion-icon slot="start" name="log-in-outline"></ion-icon> Login }
+        </ion-button>
+
+        <p class="login-signup-link">
+          Don't have an account?
+          <a routerLink="/signup">Sign up</a>
+        </p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

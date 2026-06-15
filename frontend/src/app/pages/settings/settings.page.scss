@@ -1,0 +1,44 @@
+.lock-card,
+.settings-card {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.lock-card ion-card-title,
+.settings-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg {
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.gate-note {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.field {
+  margin-bottom: 22px;
+}
+
+.field-label {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.helper {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.toggle-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
