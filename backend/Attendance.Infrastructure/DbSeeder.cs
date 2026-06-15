@@ -76,44 +76,50 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
-        if (await db.Shifts.AnyAsync()) return;
-
-        var shift = new Shift
+        // Shift: reuse the default one if present, else create it. (Independent guard
+        // so a partially-completed earlier seed self-heals on the next run.)
+        var shift = await db.Shifts.FirstOrDefaultAsync();
+        if (shift is null)
         {
-            Name = "General",
-            ShiftStart = "10:00",
-            ShiftEnd = "19:00",
-            RequiredMinutes = 480,
-            LunchStart = "13:00",
-            LunchEnd = "14:00",
-            AutoDeductLunch = true,
-            LunchPaid = false,
-            GraceMinutes = 5,
-            HalfDayThresholdMinutes = 240,
-            WeeklyOffDays = new() { 0 } // Sunday off
-        };
-        db.Shifts.Add(shift);
-        await db.SaveChangesAsync();
+            shift = new Shift
+            {
+                Name = "General",
+                ShiftStart = "10:00",
+                ShiftEnd = "19:00",
+                RequiredMinutes = 480,
+                LunchStart = "13:00",
+                LunchEnd = "14:00",
+                AutoDeductLunch = true,
+                LunchPaid = false,
+                GraceMinutes = 5,
+                HalfDayThresholdMinutes = 240,
+                WeeklyOffDays = new() { 0 } // Sunday off
+            };
+            db.Shifts.Add(shift);
+            await db.SaveChangesAsync();
+        }
 
-        var employees = new List<Employee>
+        // Employees — seeded independently of shifts/holidays.
+        if (!await db.Employees.AnyAsync())
         {
-            // EMP001 is the Admin (roleId 1) with known creds admin123 (see CONTRACT.md).
-            new() { Code = "EMP001", Name = "Aarav Sharma", RoleId = 1, Email = "aarav@example.com", Phone = "9000000001", ShiftId = shift.Id, MonthlySalary = 45000m, IsActive = true, PasswordHash = PasswordHasher.Hash("admin123") },
-            new() { Code = "EMP002", Name = "Priya Verma", RoleId = 7, Email = "priya@example.com", Phone = "9000000002", ShiftId = shift.Id, MonthlySalary = 38000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") },
-            new() { Code = "EMP003", Name = "Rohan Gupta", RoleId = 3, Email = "rohan@example.com", Phone = "9000000003", ShiftId = shift.Id, MonthlySalary = 55000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") }
-        };
-        db.Employees.AddRange(employees);
+            db.Employees.AddRange(
+                // EMP001 is the Admin (roleId 1) with known creds admin123 (see CONTRACT.md).
+                new Employee { Code = "EMP001", Name = "Aarav Sharma", RoleId = 1, Email = "aarav@example.com", Phone = "9000000001", ShiftId = shift.Id, MonthlySalary = 45000m, IsActive = true, PasswordHash = PasswordHasher.Hash("admin123") },
+                new Employee { Code = "EMP002", Name = "Priya Verma", RoleId = 7, Email = "priya@example.com", Phone = "9000000002", ShiftId = shift.Id, MonthlySalary = 38000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") },
+                new Employee { Code = "EMP003", Name = "Rohan Gupta", RoleId = 3, Email = "rohan@example.com", Phone = "9000000003", ShiftId = shift.Id, MonthlySalary = 55000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") });
+            await db.SaveChangesAsync();
+        }
 
-        var year = DateTime.Today.Year;
-        var holidays = new List<Holiday>
+        // Holidays — seeded independently.
+        if (!await db.Holidays.AnyAsync())
         {
-            new() { Date = new DateTime(year, 1, 26), Name = "Republic Day", IsPaid = true },
-            new() { Date = new DateTime(year, 8, 15), Name = "Independence Day", IsPaid = true },
-            new() { Date = new DateTime(year, 10, 2), Name = "Gandhi Jayanti", IsPaid = true },
-            new() { Date = new DateTime(year, 11, 8), Name = "Diwali", IsPaid = true }
-        };
-        db.Holidays.AddRange(holidays);
-
-        await db.SaveChangesAsync();
+            var year = DateTime.Today.Year;
+            db.Holidays.AddRange(
+                new Holiday { Date = new DateTime(year, 1, 26), Name = "Republic Day", IsPaid = true },
+                new Holiday { Date = new DateTime(year, 8, 15), Name = "Independence Day", IsPaid = true },
+                new Holiday { Date = new DateTime(year, 10, 2), Name = "Gandhi Jayanti", IsPaid = true },
+                new Holiday { Date = new DateTime(year, 11, 8), Name = "Diwali", IsPaid = true });
+            await db.SaveChangesAsync();
+        }
     }
 }
