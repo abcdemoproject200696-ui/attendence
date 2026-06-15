@@ -1,11 +1,11 @@
 # ============================================================================
-#  build-apk.ps1  —  Build the Attendance Android APK pointing at your LIVE backend.
+#  build-apk.ps1  -  Build the Attendance Android APK pointing at your LIVE backend.
 #
 #  USAGE (PowerShell, from the attendance folder):
 #     .\build-apk.ps1 -BackendUrl "https://YOUR-BACKEND.onrender.com/api"
 #
 #  Output APK: frontend\android\app\build\outputs\apk\debug\app-debug.apk
-#  Copy that .apk to your phone and install (allow "install from unknown sources").
+#  Copy that .apk to your phone and install (allow install from unknown sources).
 # ============================================================================
 param(
   [Parameter(Mandatory = $true)]
@@ -29,7 +29,6 @@ Write-Host "==> Setting apiUrl = $BackendUrl" -ForegroundColor Green
 export const environment = {
   production: true,
   apiUrl: '$BackendUrl',
-  // Basic client-side gate for the admin-only Salary page (NOT real auth).
   adminPin: 'admin123',
 };
 "@ | Set-Content -Encoding utf8 $envProd
@@ -39,6 +38,7 @@ Set-Location $frontend
 # 2) Production web build.
 Write-Host "==> npm run build" -ForegroundColor Green
 npm run build
+if ($LASTEXITCODE -ne 0) { throw "npm run build failed" }
 
 # 3) Add the Android platform the first time, then sync the web build into it.
 if (-not (Test-Path (Join-Path $frontend "android"))) {
@@ -55,9 +55,10 @@ Write-Host "==> gradlew assembleDebug" -ForegroundColor Green
 
 $apk = Join-Path $frontend "android\app\build\outputs\apk\debug\app-debug.apk"
 if (Test-Path $apk) {
-  Write-Host "`nAPK READY:" -ForegroundColor Green
+  Write-Host ""
+  Write-Host "APK READY:" -ForegroundColor Green
   Write-Host "  $apk"
   Write-Host "Copy it to your phone and install it." -ForegroundColor Cyan
 } else {
-  Write-Host "APK not found — check the Gradle output above." -ForegroundColor Red
+  Write-Host "APK not found. Check the Gradle output above." -ForegroundColor Red
 }
