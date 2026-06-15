@@ -1,0 +1,12 @@
+# Netlify config for the Attendance frontend (Ionic/Angular SPA).
+# Connect this repo in Netlify with base directory = "frontend" (or use this file).
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "www"
+
+# SPA fallback: every route serves index.html so deep links (/login, /kiosk...) work.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
