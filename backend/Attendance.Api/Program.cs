@@ -3,6 +3,12 @@ using Attendance.Api.Services;
 using Attendance.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
+// PostgreSQL (Npgsql 6+) rejects non-UTC DateTimes for 'timestamp with time zone'.
+// This app uses local/Unspecified DateTimes (DateTime.Now, date-only values), so we
+// opt into legacy behavior — DateTimes map to 'timestamp without time zone' and any
+// Kind is accepted. MUST run before any Npgsql/DbContext usage.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 const string CorsPolicy = "FrontendCors";
