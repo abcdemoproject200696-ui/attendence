@@ -50,8 +50,8 @@ npx cap sync android
 
 # 4) Build the debug APK via Gradle.
 Set-Location (Join-Path $frontend "android")
-Write-Host "==> gradlew assembleDebug" -ForegroundColor Green
-.\gradlew.bat assembleDebug
+Write-Host "==> gradlew clean assembleDebug (--no-daemon avoids daemon hangs)" -ForegroundColor Green
+.\gradlew.bat clean assembleDebug --no-daemon
 
 $apk = Join-Path $frontend "android\app\build\outputs\apk\debug\app-debug.apk"
 if (Test-Path $apk) {
