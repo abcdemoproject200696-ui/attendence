@@ -78,6 +78,25 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
+
+    // Lightweight migration: EnsureCreated does NOT add new columns to an already
+    // existing database, so columns added after the first deploy are patched here.
+    if (dbConfig.Provider == DbProvider.PostgreSql)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"VoiceEnabled\" boolean NOT NULL DEFAULT TRUE;");
+    }
+    else
+    {
+        // SQLite (local dev) has no ADD COLUMN IF NOT EXISTS — ignore "already exists".
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Settings\" ADD COLUMN \"VoiceEnabled\" INTEGER NOT NULL DEFAULT 1;");
+        }
+        catch { /* column already exists */ }
+    }
+
     await DbSeeder.SeedAsync(db);
 }
 

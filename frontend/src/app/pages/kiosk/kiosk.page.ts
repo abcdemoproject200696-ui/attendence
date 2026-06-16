@@ -102,6 +102,7 @@ export class KioskPage implements OnDestroy {
 
   // Liveness (blink) — only enforced when settings.requireLiveness is true.
   requireLiveness = signal(false); // loaded from GET /settings on enter (default false)
+  voiceEnabled = signal(true); // speak greeting on punch (admin Settings toggle)
   awaitingBlink = signal(false); // true while we wait for the user to blink
 
   // Blink state machine: we need EAR to dip below EAR_CLOSED (eyes closed) and
@@ -160,7 +161,10 @@ export class KioskPage implements OnDestroy {
   // backend being down — defaults requireLiveness to false.
   private loadSettings(): void {
     this.settingsSvc.get().subscribe({
-      next: (s) => this.requireLiveness.set(!!s.requireLiveness),
+      next: (s) => {
+        this.requireLiveness.set(!!s.requireLiveness);
+        this.voiceEnabled.set(s.voiceEnabled !== false); // default ON
+      },
       error: () => this.requireLiveness.set(false),
     });
   }
@@ -376,7 +380,7 @@ export class KioskPage implements OnDestroy {
             // Fill the code box with the matched employee's real ID/code.
             this.code = res.punch.employeeCode ?? '';
             // Greet the employee aloud by name on a successful IN/OUT.
-            this.speech.announcePunch(res.punch.employeeName, res.punch.direction);
+            if (this.voiceEnabled()) this.speech.announcePunch(res.punch.employeeName, res.punch.direction);
             this.startCooldown(this.OK_COOLDOWN);
             resolve();
           },

@@ -10,4 +10,7 @@ public class AppSetting
 
     /// <summary>Require blink (liveness) before punch on kiosk — anti photo-spoof. Client-side enforced.</summary>
     public bool RequireLiveness { get; set; }
+
+    /// <summary>Speak a greeting aloud on the kiosk when someone punches in/out.</summary>
+    public bool VoiceEnabled { get; set; } = true;
 }

@@ -92,6 +92,21 @@
         </ion-note>
       </div>
 
+      <!-- Attendance voice -->
+      <div class="field">
+        <ion-item lines="none" class="toggle-item">
+          <ion-toggle
+            [checked]="voiceEnabled()"
+            (ionChange)="onVoiceChange($event.detail.checked)"
+          >
+            Attendance voice
+          </ion-toggle>
+        </ion-item>
+        <ion-note class="helper">
+          When ON, the kiosk speaks a greeting aloud on punch (Welcome / Thank you). Turn OFF for silent.
+        </ion-note>
+      </div>
+
       <ion-button expand="block" color="success" (click)="save()" [disabled]="saving()">
         @if (saving()) {
         <ion-spinner name="crescent"></ion-spinner>

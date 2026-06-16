@@ -82,6 +82,7 @@ export class SettingsPage implements OnInit {
   setting = signal<AppSetting | null>(null);
   threshold = signal(0.5); // editable copy bound to the range slider
   requireLiveness = signal(false); // editable copy bound to the toggle
+  voiceEnabled = signal(true); // editable copy bound to the voice toggle
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -129,6 +130,7 @@ export class SettingsPage implements OnInit {
         this.setting.set(s);
         this.threshold.set(s.faceMatchThreshold);
         this.requireLiveness.set(s.requireLiveness);
+        this.voiceEnabled.set(s.voiceEnabled);
         this.loading.set(false);
       },
       error: () => {
@@ -148,6 +150,10 @@ export class SettingsPage implements OnInit {
     this.requireLiveness.set(checked);
   }
 
+  onVoiceChange(checked: boolean): void {
+    this.voiceEnabled.set(checked);
+  }
+
   thresholdLabel(): string {
     return this.threshold().toFixed(2);
   }
@@ -162,12 +168,17 @@ export class SettingsPage implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     this.settingsSvc
-      .update({ faceMatchThreshold: t, requireLiveness: this.requireLiveness() })
+      .update({
+        faceMatchThreshold: t,
+        requireLiveness: this.requireLiveness(),
+        voiceEnabled: this.voiceEnabled(),
+      })
       .subscribe({
         next: (s) => {
           this.setting.set(s);
           this.threshold.set(s.faceMatchThreshold);
           this.requireLiveness.set(s.requireLiveness);
+          this.voiceEnabled.set(s.voiceEnabled);
           this.saving.set(false);
           this.toast('Settings saved.', 'success');
         },

@@ -218,6 +218,7 @@ export interface AppSetting {
   id: number;
   faceMatchThreshold: number; // 0.3..0.7 — face match max Euclidean distance (lower = stricter)
   requireLiveness: boolean; // kiosk requires a blink before punching (anti photo-spoof)
+  voiceEnabled: boolean; // kiosk speaks a greeting aloud on punch
 }
 
 export interface PunchInput {

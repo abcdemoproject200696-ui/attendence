@@ -34,6 +34,7 @@ public class SettingsController : ControllerBase
         var settings = await GetOrCreateAsync();
         if (dto.FaceMatchThreshold.HasValue) settings.FaceMatchThreshold = dto.FaceMatchThreshold.Value;
         if (dto.RequireLiveness.HasValue) settings.RequireLiveness = dto.RequireLiveness.Value;
+        if (dto.VoiceEnabled.HasValue) settings.VoiceEnabled = dto.VoiceEnabled.Value;
 
         await _db.SaveChangesAsync();
         return Ok(settings.ToDto());
