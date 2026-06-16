@@ -140,8 +140,14 @@ public class AttendanceService
             .Where(e => e.IsActive && e.FaceDescriptors != null)
             .ToListAsync();
 
+        // Winner must be at least this much closer than the next-nearest DIFFERENT
+        // person, otherwise the scan is ambiguous and we reject it (NON-EMPLOYEE).
+        // This prevents matching a lookalike just because they were marginally nearest.
+        const double margin = 0.05;
+
         Employee? best = null;
-        var bestDist = double.MaxValue;
+        var bestDist = double.MaxValue;   // nearest employee's distance
+        var secondDist = double.MaxValue; // nearest distance among the OTHER employees
 
         foreach (var c in candidates)
         {
@@ -159,12 +165,22 @@ public class AttendanceService
 
             if (empMin < bestDist)
             {
+                secondDist = bestDist; // old best becomes runner-up
                 bestDist = empMin;
                 best = c;
             }
+            else if (empMin < secondDist)
+            {
+                secondDist = empMin;
+            }
         }
 
-        return bestDist < threshold ? new FaceMatch(best, bestDist) : new FaceMatch(null, bestDist);
+        // Confident match only if: within threshold AND clearly closer than the runner-up.
+        var confident = best is not null
+                        && bestDist < threshold
+                        && (secondDist - bestDist) >= margin;
+
+        return confident ? new FaceMatch(best, bestDist) : new FaceMatch(null, bestDist);
     }
 
     private static double EuclideanDistance(IReadOnlyList<double> a, IReadOnlyList<double> b)
