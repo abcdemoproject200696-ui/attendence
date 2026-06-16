@@ -34,17 +34,18 @@
   <div class="table-wrap">
     <ion-grid class="att-table">
       <ion-row class="thead">
-        <ion-col size="3">Employee</ion-col>
+        <ion-col size="2.5">Employee</ion-col>
         <ion-col size="1.5">In</ion-col>
         <ion-col size="1.5">Out</ion-col>
         <ion-col size="1.5">Gross</ion-col>
-        <ion-col size="1.5">Break</ion-col>
+        <ion-col size="1">Break</ion-col>
         <ion-col size="1.5">Net</ion-col>
         <ion-col size="1.5">Status</ion-col>
+        <ion-col size="1">View</ion-col>
       </ion-row>
       @for (r of rows(); track r.id || r.employeeId) {
       <ion-row class="trow" (click)="openCorrect(r)">
-        <ion-col size="3">
+        <ion-col size="2.5">
           {{ r.employeeName }}
           @if (r.isManual) { <ion-badge color="warning">manual</ion-badge> }
           @if (r.hasOpenSession) { <ion-badge color="danger">open</ion-badge> }
@@ -52,9 +53,14 @@
         <ion-col size="1.5">{{ fmtTime(r.firstIn) }}</ion-col>
         <ion-col size="1.5">{{ fmtTime(r.lastOut) }}</ion-col>
         <ion-col size="1.5">{{ fmtMin(r.grossMinutes) }}</ion-col>
-        <ion-col size="1.5">{{ fmtMin(r.breakMinutes) }}</ion-col>
+        <ion-col size="1">{{ fmtMin(r.breakMinutes) }}</ion-col>
         <ion-col size="1.5">{{ fmtMin(r.netMinutes) }}</ion-col>
         <ion-col size="1.5"><ion-badge [color]="statusColor(r.status)">{{ r.status }}</ion-badge></ion-col>
+        <ion-col size="1">
+          <ion-button size="small" fill="clear" (click)="viewDetail(r, $event)">
+            <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+          </ion-button>
+        </ion-col>
       </ion-row>
       }
       @if (rows().length === 0) {

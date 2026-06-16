@@ -1,0 +1,124 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/daily"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Attendance Detail</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="exportPdf()" [disabled]="exporting() || loading() || !!error()">
+        <ion-icon slot="icon-only" name="share-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading()) {
+  <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+  }
+  @if (error()) {
+  <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+  }
+
+  @if (!loading() && !error()) {
+  <!-- ===== Header card ===== -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-subtitle>{{ prettyDate(date) }}</ion-card-subtitle>
+      <ion-card-title>
+        {{ name() }}
+        @if (code()) { <span class="code">({{ code() }})</span> }
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-badge [color]="statusColor(day()?.status)">{{ day()?.status ?? 'No Data' }}</ion-badge>
+      <p class="counts">
+        Checked in <strong>{{ inCount() }}</strong> time(s), out <strong>{{ outCount() }}</strong> time(s).
+      </p>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- ===== Time summary ===== -->
+  <ion-grid class="summary">
+    <ion-row>
+      <ion-col size="6" size-md="3">
+        <div class="stat">
+          <span class="label">First In</span>
+          <span class="value">{{ fmtTime(day()?.firstIn) }}</span>
+        </div>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <div class="stat">
+          <span class="label">Last Out</span>
+          <span class="value">{{ fmtTime(day()?.lastOut) }}</span>
+        </div>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <div class="stat">
+          <span class="label">Total In Office</span>
+          <span class="value strong">{{ fmtMin(day()?.netMinutes ?? 0) }}</span>
+        </div>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <div class="stat">
+          <span class="label">Gross / Break</span>
+          <span class="value">{{ fmtMin(day()?.grossMinutes ?? 0) }} / {{ fmtMin(day()?.breakMinutes ?? 0) }}</span>
+        </div>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- ===== All punches ===== -->
+  <h3>Punches</h3>
+  @if (sortedPunches().length === 0) {
+  <ion-text color="medium"><p>No punches recorded for this day.</p></ion-text>
+  } @else {
+  <ion-grid class="punch-table">
+    <ion-row class="thead">
+      <ion-col size="2">#</ion-col>
+      <ion-col size="6">Direction</ion-col>
+      <ion-col size="4">Time</ion-col>
+    </ion-row>
+    @for (p of sortedPunches(); track p.id; let i = $index) {
+    <ion-row class="trow">
+      <ion-col size="2">{{ i + 1 }}</ion-col>
+      <ion-col size="6">
+        <ion-badge [color]="p.direction === 'IN' ? 'success' : 'danger'">
+          <ion-icon [name]="p.direction === 'IN' ? 'log-in-outline' : 'log-out-outline'"></ion-icon>
+          {{ p.direction === 'IN' ? 'CHECK IN' : 'CHECK OUT' }}
+        </ion-badge>
+      </ion-col>
+      <ion-col size="4">{{ fmtTime(p.timestamp) }}</ion-col>
+    </ion-row>
+    }
+  </ion-grid>
+  }
+
+  <!-- ===== Sessions ===== -->
+  @if (sessions().length > 0) {
+  <h3>Sessions</h3>
+  <ion-grid class="punch-table">
+    <ion-row class="thead">
+      <ion-col size="3">In</ion-col>
+      <ion-col size="3">Out</ion-col>
+      <ion-col size="6">Duration</ion-col>
+    </ion-row>
+    @for (s of sessions(); track $index) {
+    <ion-row class="trow">
+      <ion-col size="3">{{ fmtTime(s.inAt) }}</ion-col>
+      <ion-col size="3">{{ s.open ? '—' : fmtTime(s.outAt) }}</ion-col>
+      <ion-col size="6">
+        @if (s.open) { <ion-badge color="warning">still in</ion-badge> } @else { {{ fmtMin(s.minutes) }} }
+      </ion-col>
+    </ion-row>
+    }
+  </ion-grid>
+  }
+
+  <!-- ===== Export / Share ===== -->
+  <ion-button expand="block" class="ion-margin-top" (click)="exportPdf()" [disabled]="exporting()">
+    <ion-icon slot="start" name="download-outline"></ion-icon>
+    Export PDF / Share
+  </ion-button>
+  }
+</ion-content>

@@ -41,6 +41,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/daily/daily.page').then((m) => m.DailyPage),
   },
   {
+    path: 'attendance-detail',
+    canActivate: [authGuard],
+    data: { pageKey: 'daily' },
+    loadComponent: () =>
+      import('./pages/attendance-detail/attendance-detail.page').then((m) => m.AttendanceDetailPage),
+  },
+  {
     path: 'report',
     canActivate: [authGuard],
     data: { pageKey: 'report' },

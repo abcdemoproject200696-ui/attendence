@@ -17,13 +17,13 @@ export class SpeechService {
     if (!text) return;
 
     if (Capacitor.isNativePlatform()) {
-      // Native phone TTS (works inside the APK WebView).
+      // Native phone TTS. High pitch -> lighter / female-sounding voice.
       TextToSpeech.stop().catch(() => undefined);
       TextToSpeech.speak({
         text,
         lang: 'en-US',
         rate: 1.0,
-        pitch: 1.0,
+        pitch: 1.5,
         volume: 1.0,
         category: 'ambient',
       }).catch(() => undefined);
@@ -38,17 +38,35 @@ export class SpeechService {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'en-US';
       u.rate = 1;
-      u.pitch = 1;
+      u.pitch = 1.5; // higher pitch = lighter / female-sounding
       u.volume = 1;
+      const female = this.pickFemaleVoice(synth);
+      if (female) u.voice = female;
       synth.speak(u);
     } catch {
       /* speech unavailable - ignore */
     }
   }
 
-  // Greet on a punch, e.g. "Thank you Rajanish Maury. Checked in."
+  // Try to pick a female English voice in the browser (best-effort).
+  private pickFemaleVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
+    const voices = synth.getVoices();
+    if (!voices.length) return null;
+    const en = voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
+    const byName = (kw: string) => en.find((v) => v.name.toLowerCase().includes(kw));
+    return (
+      byName('female') ||
+      byName('zira') ||
+      byName('samantha') ||
+      byName('google uk english female') ||
+      byName('aria') ||
+      en[0] ||
+      null
+    );
+  }
+
+  // Greet on a punch: IN -> "Welcome to TA, {name}", OUT -> "Thank you {name}".
   announcePunch(name: string, direction: 'IN' | 'OUT'): void {
-    const action = direction === 'IN' ? 'Checked in' : 'Checked out';
-    this.speak(`Thank you ${name}. ${action}.`);
+    this.speak(direction === 'IN' ? `Welcome to TA, ${name}` : `Thank you ${name}`);
   }
 }

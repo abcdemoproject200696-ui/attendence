@@ -1,4 +1,4 @@
-import { Component, OnDestroy, AfterViewInit, ViewChild, ElementRef, inject, signal } from '@angular/core';
+import { Component, OnDestroy, ViewChild, ElementRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -71,7 +71,7 @@ import { fmtMinutes, fmtTime } from '../../core/util';
     IonToggle,
   ],
 })
-export class KioskPage implements AfterViewInit, OnDestroy {
+export class KioskPage implements OnDestroy {
   @ViewChild('video') videoRef?: ElementRef<HTMLVideoElement>;
   @ViewChild('canvas') canvasRef?: ElementRef<HTMLCanvasElement>;
 
@@ -115,11 +115,9 @@ export class KioskPage implements AfterViewInit, OnDestroy {
   private latestDescriptor: number[] | null = null; // freshest descriptor for the blinker
 
   private destroyed = false;
+  private active = false; // true only while THIS page is the visible one (Ionic lifecycle)
   private scanTimer: ReturnType<typeof setTimeout> | null = null;
   private cooldownTimer: ReturnType<typeof setTimeout> | null = null;
-  // Public scanner: unknown face -> go to signup after this delay (skipped when logged in).
-  private nonEmpRedirectTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly NONEMP_REDIRECT_MS = 5000;
   private readonly SCAN_INTERVAL = 700; // ms between auto detection attempts
   private readonly BLINK_INTERVAL = 250; // faster sampling while waiting for a blink
   private readonly OK_COOLDOWN = 6000; // pause after a successful punch
@@ -138,12 +136,24 @@ export class KioskPage implements AfterViewInit, OnDestroy {
     });
   }
 
-  async ngAfterViewInit(): Promise<void> {
+  // Ionic fires this every time the page becomes visible (incl. first load). We
+  // (re)start the camera + scanning here so it only runs while on this page.
+  async ionViewDidEnter(): Promise<void> {
+    this.active = true;
     await this.startCamera();
     await this.ensureModels();
     this.loadSettings();
-    // Begin continuous auto-detection — no button press needed.
     this.scheduleScan(800);
+  }
+
+  // Leaving the page (navigating away / page hidden): STOP camera + scanning so it
+  // doesn't keep running (and announcing) on other pages.
+  ionViewWillLeave(): void {
+    this.active = false;
+    this.clearTimers();
+    this.face.stopCamera();
+    this.cameraOn.set(false);
+    this.scanning.set(false);
   }
 
   // Load global settings to know whether liveness is required. Tolerates the
@@ -171,7 +181,6 @@ export class KioskPage implements AfterViewInit, OnDestroy {
       clearTimeout(this.cooldownTimer);
       this.cooldownTimer = null;
     }
-    this.cancelSignupRedirect();
   }
 
   // Whether someone is logged into the admin app (vs the public door scanner).
@@ -179,32 +188,13 @@ export class KioskPage implements AfterViewInit, OnDestroy {
     return this.auth.isLoggedIn();
   }
 
+  // Login / Sign Up are reached ONLY by tapping these (no auto-redirect).
   goToLogin(): void {
-    this.cancelSignupRedirect();
     void this.router.navigate(['/login']);
   }
 
   goToSignup(): void {
-    this.cancelSignupRedirect();
     void this.router.navigate(['/signup']);
-  }
-
-  // On the PUBLIC scanner, an unrecognized face is taken to Sign Up after a short
-  // delay (so they can read the NON-EMPLOYEE message). Skipped when logged in.
-  private scheduleSignupRedirect(): void {
-    if (this.auth.isLoggedIn()) return;
-    this.cancelSignupRedirect();
-    this.nonEmpRedirectTimer = setTimeout(
-      () => void this.router.navigate(['/signup']),
-      this.NONEMP_REDIRECT_MS
-    );
-  }
-
-  private cancelSignupRedirect(): void {
-    if (this.nonEmpRedirectTimer) {
-      clearTimeout(this.nonEmpRedirectTimer);
-      this.nonEmpRedirectTimer = null;
-    }
   }
 
   // Toggle continuous auto-scan on/off (manual SCAN FACE button appears when off).
@@ -257,7 +247,7 @@ export class KioskPage implements AfterViewInit, OnDestroy {
   // ===== Continuous auto-scan loop =====
   // Schedules the next detection attempt. Self-reschedules so only one runs at a time.
   private scheduleScan(delay: number = this.SCAN_INTERVAL): void {
-    if (this.destroyed) return;
+    if (this.destroyed || !this.active) return; // never scan while off this page
     if (this.scanTimer) clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => void this.autoTick(), delay);
   }
@@ -266,7 +256,7 @@ export class KioskPage implements AfterViewInit, OnDestroy {
   // When liveness is ON it runs a small blink state machine and only punches
   // after a confirmed live blink.
   private async autoTick(): Promise<void> {
-    if (this.destroyed || !this.autoScan()) return;
+    if (this.destroyed || !this.active || !this.autoScan()) return;
     // Not ready, busy, or cooling down → just try again shortly.
     if (!this.cameraOn() || !this.modelsReady() || this.scanning() || this.loading() || this.cooldown()) {
       this.resetBlink();
@@ -394,18 +384,10 @@ export class KioskPage implements AfterViewInit, OnDestroy {
             this.result.set(null);
             this.loading.set(false);
             if (err?.status === 404) {
-              // Unknown face → prominent NON-EMPLOYEE card with Sign Up / Login.
+              // Unknown face → show NON-EMPLOYEE briefly. NO auto-redirect — the
+              // always-visible Login / Sign Up buttons let them choose manually.
               this.nonEmployee.set(true);
               this.error.set(null);
-              if (!this.auth.isLoggedIn()) {
-                // Public scanner: PAUSE auto-scan so the card + Sign Up/Login buttons
-                // stay stable (don't flash/reset), and auto-redirect to Sign Up once.
-                this.autoScan.set(false);
-                this.scheduleSignupRedirect();
-                resolve();
-                return;
-              }
-              // Logged-in admin just viewing the kiosk: flash the card, keep scanning.
               this.startCooldown(this.RETRY_COOLDOWN);
             } else {
               this.nonEmployee.set(false);

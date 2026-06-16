@@ -1,0 +1,58 @@
+.code {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ion-color-medium);
+}
+
+.counts {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.summary {
+  margin-bottom: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 4px;
+}
+
+.stat .label {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+.stat .value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stat .value.strong {
+  color: var(--ion-color-primary);
+  font-size: 18px;
+}
+
+h3 {
+  margin-top: 18px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.punch-table .thead {
+  font-weight: 700;
+  border-bottom: 2px solid var(--ion-color-step-200, #ccc);
+  font-size: 13px;
+}
+
+.punch-table .trow {
+  border-bottom: 1px solid var(--ion-color-step-100, #eee);
+  align-items: center;
+  font-size: 14px;
+}
+
+.punch-table ion-badge ion-icon {
+  vertical-align: middle;
+  margin-right: 2px;
+}

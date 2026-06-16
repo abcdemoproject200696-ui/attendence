@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -27,7 +28,7 @@ import {
   AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline } from 'ionicons/icons';
+import { buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline, eyeOutline } from 'ionicons/icons';
 import { AttendanceService } from '../../core/attendance.service';
 import { AttendanceDay, AttendancePunch, DayStatus, Direction } from '../../core/models';
 import { fmtMinutes, fmtTime, todayIso } from '../../core/util';
@@ -67,6 +68,7 @@ export class DailyPage implements OnInit {
   private attendance = inject(AttendanceService);
   private toastCtrl = inject(ToastController);
   private alertCtrl = inject(AlertController);
+  private router = inject(Router);
 
   date = todayIso();
   loading = signal(false);
@@ -97,7 +99,7 @@ export class DailyPage implements OnInit {
   overrideNote = '';
 
   constructor() {
-    addIcons({ buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline });
+    addIcons({ buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline, eyeOutline });
   }
 
   ngOnInit(): void {
@@ -143,6 +145,14 @@ export class DailyPage implements OnInit {
         this.error.set('Could not load daily data. Is the backend running?');
         this.loading.set(false);
       },
+    });
+  }
+
+  // Open the read-only daily detail page for one employee (View button).
+  viewDetail(row: AttendanceDay, event: Event): void {
+    event.stopPropagation();
+    this.router.navigate(['/attendance-detail'], {
+      queryParams: { employeeId: row.employeeId, date: this.date, name: row.employeeName },
     });
   }
 

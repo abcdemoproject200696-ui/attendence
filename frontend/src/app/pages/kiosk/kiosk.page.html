@@ -6,13 +6,15 @@
     </ion-buttons>
     }
     <ion-title>Attendance — Punch In / Out</ion-title>
-    @if (!isLoggedIn()) {
+    <!-- Login / Sign Up are ALWAYS visible on the scanner. -->
     <ion-buttons slot="end">
       <ion-button (click)="goToLogin()">
         <ion-icon slot="start" name="log-in-outline"></ion-icon> Login
       </ion-button>
+      <ion-button (click)="goToSignup()">
+        <ion-icon slot="start" name="person-add-outline"></ion-icon> Sign Up
+      </ion-button>
     </ion-buttons>
-    }
   </ion-toolbar>
 </ion-header>
 
@@ -105,17 +107,7 @@
                 </div>
                 <div class="nonemp-title">NON-EMPLOYEE</div>
                 <p class="nonemp-sub">Unknown person — not registered.</p>
-                @if (!isLoggedIn()) {
-                <p class="nonemp-sub">Taking you to Sign Up…</p>
-                <ion-button expand="block" (click)="goToSignup()">
-                  <ion-icon slot="start" name="person-add-outline"></ion-icon> Sign Up now
-                </ion-button>
-                <ion-button expand="block" fill="clear" color="light" (click)="goToLogin()">
-                  Already registered? Login
-                </ion-button>
-                } @else {
-                <p class="nonemp-sub">Please enroll this person or use their code.</p>
-                }
+                <p class="nonemp-sub">Use the <strong>Sign Up</strong> or <strong>Login</strong> button above.</p>
               </ion-card-content>
             </ion-card>
             }
