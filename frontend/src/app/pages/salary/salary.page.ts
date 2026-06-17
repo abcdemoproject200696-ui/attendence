@@ -264,10 +264,10 @@ export class SalaryPage implements OnInit {
         ['Payable Days', s.payableDays.toFixed(2)],
       ],
       theme: 'striped',
-      styles: { fontSize: 9.5, cellPadding: 2.6, textColor: INK },
-      headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: { top: 3.4, right: 7, bottom: 3.4, left: 7 }, valign: 'middle', textColor: INK },
+      headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold', halign: 'left' },
       alternateRowStyles: { fillColor: BLUE_SOFT },
-      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right', fontStyle: 'bold', cellWidth: 55 } },
     });
 
     // ===== Salary calculation (method shown inline in row labels) =====
@@ -285,10 +285,10 @@ export class SalaryPage implements OnInit {
         ['Earned  =  Per Day x Payable Days', this.inrPdf(s.earnedSalary)],
       ],
       theme: 'striped',
-      styles: { fontSize: 9.5, cellPadding: 2.6, textColor: INK },
-      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: { top: 3.4, right: 7, bottom: 3.4, left: 7 }, valign: 'middle', textColor: INK },
+      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold', halign: 'left' },
       alternateRowStyles: { fillColor: GREEN_SOFT },
-      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right', fontStyle: 'bold', cellWidth: 55 } },
     });
 
     // ===== NET PAYABLE banner (big, green, like the on-screen card) =====
