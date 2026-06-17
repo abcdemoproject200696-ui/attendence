@@ -163,13 +163,15 @@ public class LeaveUpdateDto
 }
 
 // ---------- App settings ----------
-public record AppSettingDto(int Id, double FaceMatchThreshold, bool RequireLiveness, bool VoiceEnabled);
+public record AppSettingDto(
+    int Id, double FaceMatchThreshold, bool RequireLiveness, bool VoiceEnabled, bool OvertimePayable);
 
 public class AppSettingUpdateDto
 {
     public double? FaceMatchThreshold { get; set; }
     public bool? RequireLiveness { get; set; }
     public bool? VoiceEnabled { get; set; }
+    public bool? OvertimePayable { get; set; }
 }
 
 // ---------- Monthly report ----------

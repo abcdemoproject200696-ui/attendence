@@ -35,6 +35,7 @@ public class SettingsController : ControllerBase
         if (dto.FaceMatchThreshold.HasValue) settings.FaceMatchThreshold = dto.FaceMatchThreshold.Value;
         if (dto.RequireLiveness.HasValue) settings.RequireLiveness = dto.RequireLiveness.Value;
         if (dto.VoiceEnabled.HasValue) settings.VoiceEnabled = dto.VoiceEnabled.Value;
+        if (dto.OvertimePayable.HasValue) settings.OvertimePayable = dto.OvertimePayable.Value;
 
         await _db.SaveChangesAsync();
         return Ok(settings.ToDto());

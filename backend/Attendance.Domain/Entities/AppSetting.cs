@@ -13,4 +13,11 @@ public class AppSetting
 
     /// <summary>Speak a greeting aloud on the kiosk when someone punches in/out.</summary>
     public bool VoiceEnabled { get; set; } = true;
+
+    /// <summary>
+    /// When true, salary pays for ALL worked hours including overtime (e.g. 10h on an 8h
+    /// shift = 10/8 of a day's pay). When false (default), each day is capped at a full
+    /// day (8h) — under-time is pro-rated down, over-time is NOT paid extra.
+    /// </summary>
+    public bool OvertimePayable { get; set; }
 }

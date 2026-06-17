@@ -225,6 +225,7 @@ export interface AppSetting {
   faceMatchThreshold: number; // 0.3..0.7 — face match max Euclidean distance (lower = stricter)
   requireLiveness: boolean; // kiosk requires a blink before punching (anti photo-spoof)
   voiceEnabled: boolean; // kiosk speaks a greeting aloud on punch
+  overtimePayable: boolean; // pay for overtime hours in salary (off = each day capped at full day)
 }
 
 export interface PunchInput {

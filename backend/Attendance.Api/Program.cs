@@ -85,6 +85,8 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"VoiceEnabled\" boolean NOT NULL DEFAULT TRUE;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"OvertimePayable\" boolean NOT NULL DEFAULT FALSE;");
     }
     else
     {
@@ -93,6 +95,12 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Settings\" ADD COLUMN \"VoiceEnabled\" INTEGER NOT NULL DEFAULT 1;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Settings\" ADD COLUMN \"OvertimePayable\" INTEGER NOT NULL DEFAULT 0;");
         }
         catch { /* column already exists */ }
     }

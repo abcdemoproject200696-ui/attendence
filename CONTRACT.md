@@ -123,9 +123,13 @@ liya jaye (koi bhi ek match kare to bas). Punch request abhi bhi single `faceDes
 
 ### AppSetting (single-row global settings; admin-editable)
 ```
-{ id, faceMatchThreshold:0.5, requireLiveness:false }
+{ id, faceMatchThreshold:0.5, requireLiveness:false, voiceEnabled:true, overtimePayable:false }
 // faceMatchThreshold: face match max Euclidean distance (lower = stricter). Range 0.3..0.7.
 // requireLiveness: kiosk me punch se pehle blink (liveness) zaroori — anti photo-spoof. Client-side enforce.
+// voiceEnabled: kiosk punch par greeting bole.
+// overtimePayable: ON => salary overtime hours bhi pay kare (10h on 8h shift = 10/8 din). OFF (default)
+//   => har din max ek full day (overtime extra pay nahi; under-time pro-rated, e.g. 6h = 6/8 din).
+//   Naya column Program.cs me ALTER TABLE ADD COLUMN IF NOT EXISTS se patch hota hai (no DB recreate).
 ```
 
 ### LeaveRequest

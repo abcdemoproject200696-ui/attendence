@@ -83,6 +83,7 @@ export class SettingsPage implements OnInit {
   threshold = signal(0.5); // editable copy bound to the range slider
   requireLiveness = signal(false); // editable copy bound to the toggle
   voiceEnabled = signal(true); // editable copy bound to the voice toggle
+  overtimePayable = signal(false); // editable copy bound to the overtime toggle
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -131,6 +132,7 @@ export class SettingsPage implements OnInit {
         this.threshold.set(s.faceMatchThreshold);
         this.requireLiveness.set(s.requireLiveness);
         this.voiceEnabled.set(s.voiceEnabled);
+        this.overtimePayable.set(s.overtimePayable);
         this.loading.set(false);
       },
       error: () => {
@@ -154,6 +156,10 @@ export class SettingsPage implements OnInit {
     this.voiceEnabled.set(checked);
   }
 
+  onOvertimeChange(checked: boolean): void {
+    this.overtimePayable.set(checked);
+  }
+
   thresholdLabel(): string {
     return this.threshold().toFixed(2);
   }
@@ -172,6 +178,7 @@ export class SettingsPage implements OnInit {
         faceMatchThreshold: t,
         requireLiveness: this.requireLiveness(),
         voiceEnabled: this.voiceEnabled(),
+        overtimePayable: this.overtimePayable(),
       })
       .subscribe({
         next: (s) => {
@@ -179,6 +186,7 @@ export class SettingsPage implements OnInit {
           this.threshold.set(s.faceMatchThreshold);
           this.requireLiveness.set(s.requireLiveness);
           this.voiceEnabled.set(s.voiceEnabled);
+          this.overtimePayable.set(s.overtimePayable);
           this.saving.set(false);
           this.toast('Settings saved.', 'success');
         },

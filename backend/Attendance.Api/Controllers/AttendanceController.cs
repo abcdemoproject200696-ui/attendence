@@ -208,11 +208,19 @@ public class AttendanceController : ControllerBase
         int totalNet = 0;
 
         // A full working day = shift.RequiredMinutes (e.g. 480 = 8h). Salary is pro-rated by
-        // the ACTUAL hours worked: a worked day pays (min(net, required) / required) of a full
-        // day. So 3h worked on an 8h shift pays 3/8 of that day. >= full hours pays a full day
-        // (no overtime). Paid leave/holiday/weeklyOff still pay a full day each.
+        // the ACTUAL hours worked: a worked day pays (hours / required) of a full day.
+        // So 3h on an 8h shift pays 3/8, 6h pays 6/8. Paid leave/holiday/weeklyOff = full day.
+        // OVERTIME: if AppSetting.OvertimePayable is ON, a >8h day pays >1.0 (e.g. 10h = 10/8);
+        // if OFF (default), each day is capped at a full day (overtime not paid extra).
         var requiredMinutes = shift.RequiredMinutes > 0 ? shift.RequiredMinutes : 480;
+        var overtimePayable = (await _db.Settings.AsNoTracking().FirstOrDefaultAsync())?.OvertimePayable ?? false;
         double payableWorkDays = 0;
+
+        double DayFraction(int netMinutes)
+        {
+            var fraction = netMinutes / (double)requiredMinutes;
+            return overtimePayable ? fraction : Math.Min(fraction, 1.0);
+        }
 
         // Pass 2: count ONLY days inside [firstPresent, lastPresent]. Sundays / paid
         // holidays before the first present day (not joined/started yet) or after the
@@ -226,11 +234,11 @@ public class AttendanceController : ControllerBase
             {
                 case DayStatus.Present:
                     presentDays++;
-                    payableWorkDays += Math.Min(day.NetMinutes, requiredMinutes) / (double)requiredMinutes;
+                    payableWorkDays += DayFraction(day.NetMinutes);
                     break;
                 case DayStatus.HalfDay:
                     halfDays++;
-                    payableWorkDays += Math.Min(day.NetMinutes, requiredMinutes) / (double)requiredMinutes;
+                    payableWorkDays += DayFraction(day.NetMinutes);
                     break;
                 case DayStatus.Absent: absentDays++; break;
                 case DayStatus.WeeklyOff: weeklyOffs++; break;
@@ -256,7 +264,9 @@ public class AttendanceController : ControllerBase
         // Loss of pay = absent/unpaid full days + the shortfall hours on worked-but-short days
         // (e.g. a 3h present day on an 8h shift loses 5h => 5/8 of a day's pay).
         var workedDayCount = presentDays + halfDays;
-        var lostDays = absentDays + unpaidLeaves + unpaidHolidays + (workedDayCount - payableWorkDays);
+        // Shortfall only counts UNDER-time (clamp >=0 so overtime never shows as negative loss).
+        var workShortfall = Math.Max(0, workedDayCount - payableWorkDays);
+        var lostDays = absentDays + unpaidLeaves + unpaidHolidays + workShortfall;
         var lossOfPay = Math.Round(perDaySalary * (decimal)lostDays, 0, MidpointRounding.AwayFromZero);
         var netPayable = earnedSalary;
 
