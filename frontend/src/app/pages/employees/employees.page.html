@@ -26,27 +26,33 @@
   }
   <ion-list>
     @for (emp of employees(); track emp.id) {
-    <ion-item>
+    <ion-item lines="full" class="emp-item">
       <ion-icon slot="start" name="person-circle-outline" size="large"></ion-icon>
-      <ion-label>
+      <ion-label class="ion-text-wrap">
+        <!-- ===== Employee detail (full width, ek line saaf) ===== -->
         <h2>{{ emp.name }} <ion-badge color="medium">{{ emp.code }}</ion-badge></h2>
         <p>{{ emp.roleName || '—' }} · Shift: {{ shiftName(emp.shiftId) }}</p>
         <p>{{ emp.email }} · {{ emp.phone }}</p>
+
+        <!-- ===== Actions row (neeche) ===== -->
+        <div class="emp-actions">
+          <ion-badge [color]="emp.isActive ? 'success' : 'medium'">
+            {{ emp.isActive ? 'Active' : 'Inactive' }}
+          </ion-badge>
+          @if (emp.faceCount > 0) {
+          <ion-badge color="tertiary">Face: {{ emp.faceCount }}</ion-badge>
+          }
+          <span class="spacer"></span>
+          <ion-button size="small" fill="outline" (click)="openEdit(emp)">
+            <ion-icon slot="start" name="create-outline"></ion-icon> Edit
+          </ion-button>
+          @if (isAdmin()) {
+          <ion-button size="small" fill="outline" color="danger" (click)="confirmDelete(emp)">
+            <ion-icon slot="start" name="trash-outline"></ion-icon> Delete
+          </ion-button>
+          }
+        </div>
       </ion-label>
-      @if (emp.faceCount > 0) {
-      <ion-badge slot="end" color="tertiary">Face: {{ emp.faceCount }}</ion-badge>
-      }
-      <ion-badge slot="end" [color]="emp.isActive ? 'success' : 'medium'">
-        {{ emp.isActive ? 'Active' : 'Inactive' }}
-      </ion-badge>
-      <ion-button slot="end" fill="clear" (click)="openEdit(emp)">
-        <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-      </ion-button>
-      @if (isAdmin()) {
-      <ion-button slot="end" fill="clear" color="danger" (click)="confirmDelete(emp)">
-        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-      </ion-button>
-      }
     </ion-item>
     }
   </ion-list>

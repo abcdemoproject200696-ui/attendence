@@ -1,0 +1,30 @@
+// Employee row: detail on top (full width), action buttons in a row BELOW so the
+// name/role/contact lines stay readable on a narrow mobile screen.
+.emp-item {
+  --inner-padding-top: 10px;
+  --inner-padding-bottom: 10px;
+}
+
+.emp-item h2 {
+  font-weight: 600;
+}
+
+.emp-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.emp-actions .spacer {
+  flex: 1 1 auto;
+}
+
+.emp-actions ion-button {
+  margin: 0;
+}
+
+.emp-actions ion-badge {
+  vertical-align: middle;
+}

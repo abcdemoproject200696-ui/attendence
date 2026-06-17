@@ -38,6 +38,7 @@ import { EmployeeFormComponent } from './employee-form.component';
   selector: 'app-employees',
   standalone: true,
   templateUrl: './employees.page.html',
+  styleUrls: ['./employees.page.scss'],
   imports: [
     CommonModule,
     IonHeader,
