@@ -33,4 +33,13 @@ public static class BusinessClock
         dt.Kind == DateTimeKind.Utc
             ? DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeFromUtc(dt, Tz), DateTimeKind.Unspecified)
             : DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+
+    /// <summary>
+    /// Treat an admin-typed time (e.g. "13:00" from the manual-punch form, which arrives
+    /// Kind=Unspecified) as IST and store it the SAME way a live DateTime.Now punch is stored.
+    /// Tag it Local so EF/Npgsql converts it to the correct instant (server TZ = IST), matching
+    /// kiosk punches. Without this a manual 13:00 was assumed UTC and showed up as 18:30.
+    /// </summary>
+    public static DateTime AsLocalInput(DateTime wallClock) =>
+        DateTime.SpecifyKind(wallClock, DateTimeKind.Local);
 }

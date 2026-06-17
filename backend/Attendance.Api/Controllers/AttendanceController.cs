@@ -304,7 +304,7 @@ public class AttendanceController : ControllerBase
         var punch = new AttendancePunch
         {
             EmployeeId = dto.EmployeeId,
-            Timestamp = dto.Timestamp,
+            Timestamp = BusinessClock.AsLocalInput(dto.Timestamp), // typed time is IST
             Direction = dto.Direction,
             Source = PunchSource.Manual,
             Note = dto.Note
@@ -328,7 +328,7 @@ public class AttendanceController : ControllerBase
         if (punch is null) return NotFound();
 
         var oldDate = punch.Timestamp.Date;
-        punch.Timestamp = dto.Timestamp;
+        punch.Timestamp = BusinessClock.AsLocalInput(dto.Timestamp); // typed time is IST
         punch.Direction = dto.Direction;
         if (dto.Note != null) punch.Note = dto.Note;
         punch.Source = PunchSource.Manual;
