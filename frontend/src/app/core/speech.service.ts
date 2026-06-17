@@ -69,8 +69,8 @@ export class SpeechService {
     );
   }
 
-  // Greet on a punch: IN -> "Welcome to TA, {name}", OUT -> "Thank you {name}".
+  // Greet on a punch: IN -> "Permission granted, {name}", OUT -> "Thank you, {name}".
   announcePunch(name: string, direction: 'IN' | 'OUT'): void {
-    this.speak(direction === 'IN' ? `Welcome to TA, ${name}` : `Thank you ${name}`);
+    this.speak(direction === 'IN' ? `Permission granted, ${name}` : `Thank you, ${name}`);
   }
 }

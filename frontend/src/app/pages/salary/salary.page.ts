@@ -158,6 +158,25 @@ export class SalaryPage implements OnInit {
     return `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
+  // PDF-safe money. jsPDF's built-in fonts have NO Rupee (₹) glyph — it renders as a
+  // broken "¹" and pushes the number off the page. So the PDF uses "Rs" instead.
+  private inrPdf(n: number): string {
+    return `Rs ${Math.round(n ?? 0).toLocaleString('en-IN')}`;
+  }
+  private inrPdfDec(n: number): string {
+    return `Rs ${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // "2026-06" -> "June 2026" for the slip header + file name.
+  private monthLong(month: string): string {
+    const [y, m] = month.split('-').map(Number);
+    const names = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return m >= 1 && m <= 12 ? `${names[m - 1]} ${y}` : month;
+  }
+
   // A full working day in hours, e.g. 480 min -> "8".
   reqHours(min: number): string {
     return (min / 60).toFixed(min % 60 === 0 ? 0 : 1);
@@ -213,7 +232,7 @@ export class SalaryPage implements OnInit {
     doc.text('SALARY SLIP', 14, 16);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    doc.text(`Month: ${r.month}`, 14, 25);
+    doc.text(`Month: ${this.monthLong(r.month)}`, 14, 25);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('Attendance System', pageW - 14, 16, { align: 'right' });
@@ -231,13 +250,15 @@ export class SalaryPage implements OnInit {
     // ===== Attendance summary =====
     autoTable(doc, {
       startY: 57,
-      head: [['Attendance', 'Days']],
+      head: [['Attendance', 'Value']],
       body: [
         ['Present Days', String(s.presentDays)],
         ['Half Days', String(s.halfDays)],
         ['Absent Days', String(s.absentDays)],
         ['Paid Leaves', String(s.paidLeaves)],
+        ['Unpaid Leaves', String(s.unpaidLeaves)],
         ['Paid Holidays', String(s.paidHolidays)],
+        ['Unpaid Holidays', String(s.unpaidHolidays)],
         ['Weekly Offs', String(s.weeklyOffs)],
         ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
         ['Payable Days', s.payableDays.toFixed(2)],
@@ -254,14 +275,14 @@ export class SalaryPage implements OnInit {
       startY: this.finalY(doc) + 5,
       head: [['Salary Calculation', 'Amount']],
       body: [
-        ['Monthly Salary', this.inr(s.monthlySalary)],
+        ['Monthly Salary', this.inrPdf(s.monthlySalary)],
         ['Total Days in Month', String(s.totalDaysInMonth)],
-        ['Per Day  =  Monthly / Days', this.inrDec(s.perDaySalary)],
+        ['Per Day  =  Monthly / Days', this.inrPdfDec(s.perDaySalary)],
         ['Working Hours / Day', `${reqH} h`],
-        ['Per Hour  =  Per Day / Hours', this.inrDec(s.perHourSalary)],
+        ['Per Hour  =  Per Day / Hours', this.inrPdfDec(s.perHourSalary)],
         ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
         ['Payable Days (hour-based)', s.payableDays.toFixed(2)],
-        ['Earned  =  Per Day x Payable Days', this.inr(s.earnedSalary)],
+        ['Earned  =  Per Day x Payable Days', this.inrPdf(s.earnedSalary)],
       ],
       theme: 'striped',
       styles: { fontSize: 9.5, cellPadding: 2.6, textColor: INK },
@@ -279,7 +300,7 @@ export class SalaryPage implements OnInit {
     doc.setFontSize(14);
     doc.text('NET PAYABLE', 22, y + 11.5);
     doc.setFontSize(17);
-    doc.text(this.inr(s.netPayable), pageW - 22, y + 11.5, { align: 'right' });
+    doc.text(this.inrPdf(s.netPayable), pageW - 22, y + 11.5, { align: 'right' });
 
     // ===== Calculation method (so the shared slip explains itself) =====
     y += 28;
@@ -288,11 +309,11 @@ export class SalaryPage implements OnInit {
     doc.setFontSize(8.6);
     const method =
       `How this is calculated:\n` +
-      `1. Per Day Salary = Monthly Salary / ${s.totalDaysInMonth} days = ${this.inrDec(s.perDaySalary)}.\n` +
-      `2. Per Hour Salary = Per Day / ${reqH} working hours = ${this.inrDec(s.perHourSalary)}.\n` +
+      `1. Per Day Salary = Monthly Salary / ${s.totalDaysInMonth} days = ${this.inrPdfDec(s.perDaySalary)}.\n` +
+      `2. Per Hour Salary = Per Day / ${reqH} working hours = ${this.inrPdfDec(s.perHourSalary)}.\n` +
       `3. Each present day is paid by the actual hours worked (hours / ${reqH}h), capped at one full day. ` +
       `Overtime is paid only when "Overtime payable" is enabled in Settings.\n` +
-      `4. Net Payable = Per Day x Payable Days (${s.payableDays.toFixed(2)}) = ${this.inr(s.netPayable)}.`;
+      `4. Net Payable = Per Day x Payable Days (${s.payableDays.toFixed(2)}) = ${this.inrPdf(s.netPayable)}.`;
     doc.text(doc.splitTextToSize(method, pageW - 28) as string[], 14, y);
 
     // Thin footer rule + note.
@@ -303,7 +324,7 @@ export class SalaryPage implements OnInit {
     doc.setTextColor(...MUTED);
     doc.text('Computer-generated salary slip — Attendance System.', 14, 291);
 
-    doc.save(`salary-slip-${r.employeeName}-${r.month}.pdf`);
+    doc.save(`${r.employeeName} Salary Slip ${this.monthLong(r.month)}.pdf`);
     this.toast('Salary slip PDF downloaded.', 'success');
   }
 
