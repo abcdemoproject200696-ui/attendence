@@ -73,6 +73,8 @@ public class AttendanceService
         day.GrossMinutes = calc.GrossMinutes;
         day.BreakMinutes = calc.BreakMinutes;
         day.LunchDeduction = calc.LunchDeduction;
+        day.LunchFrom = calc.LunchFrom;
+        day.LunchTo = calc.LunchTo;
         day.NetMinutes = calc.NetMinutes;
         day.Status = calc.Status;
         day.HasOpenSession = calc.HasOpenSession;

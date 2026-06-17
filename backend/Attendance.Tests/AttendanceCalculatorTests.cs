@@ -83,6 +83,9 @@ public class AttendanceCalculatorTests
         Assert.Equal(60, r.LunchDeduction);
         Assert.Equal(480, r.NetMinutes);
         Assert.Equal(DayStatus.Present, r.Status);
+        // The exact deducted window is exposed so the UI/PDF can show "13:00 - 14:00".
+        Assert.Equal(Day.AddHours(13), r.LunchFrom);
+        Assert.Equal(Day.AddHours(14), r.LunchTo);
     }
 
     [Fact]
@@ -95,6 +98,19 @@ public class AttendanceCalculatorTests
         Assert.Equal(60, r.GrossMinutes);
         Assert.Equal(30, r.LunchDeduction);
         Assert.Equal(30, r.NetMinutes);
+        Assert.Equal(Day.AddHours(13).AddMinutes(30), r.LunchFrom); // overlap starts at check-in 13:30
+        Assert.Equal(Day.AddHours(14), r.LunchTo);                  // ...to lunch end 14:00
+    }
+
+    [Fact]
+    public void NoLunchOverlap_LunchWindowIsNull()
+    {
+        // 10:00-12:00 doesn't touch lunch (13-14) => nothing deducted, no window.
+        var punches = new[] { P("10:00", Direction.IN), P("12:00", Direction.OUT) };
+        var r = AttendanceCalculator.Compute(punches, Policy(), Ctx());
+        Assert.Equal(0, r.LunchDeduction);
+        Assert.Null(r.LunchFrom);
+        Assert.Null(r.LunchTo);
     }
 
     // ---------- No double-deduct when already punched out during lunch ----------

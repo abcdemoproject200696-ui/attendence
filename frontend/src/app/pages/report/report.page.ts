@@ -150,13 +150,13 @@ export class ReportPage implements OnInit {
 
     autoTable(doc, {
       startY: 30,
-      head: [['Date', 'In', 'Out', 'Gross', 'Break', 'Net', 'Status']],
+      head: [['Date', 'In', 'Out', 'Gross', 'Lunch −', 'Net', 'Status']],
       body: r.days.map((d) => [
         d.date,
         fmtTime(d.firstIn),
         fmtTime(d.lastOut),
         fmtMinutes(d.grossMinutes),
-        fmtMinutes(d.breakMinutes),
+        d.lunchDeduction > 0 ? `${fmtMinutes(d.lunchDeduction)} (${fmtTime(d.lunchFrom)}-${fmtTime(d.lunchTo)})` : '-',
         fmtMinutes(d.netMinutes),
         d.status,
       ]),
@@ -177,7 +177,7 @@ export class ReportPage implements OnInit {
         ['Unpaid Leaves', String(s.unpaidLeaves)],
         ['Weekly Offs', String(s.weeklyOffs)],
         ['Total Net Hours', fmtMinutes(s.totalNetMinutes)],
-        ['Payable Days', String(s.payableDays)],
+        ['Payable Days (hour-based)', s.payableDays.toFixed(2)],
       ],
       styles: { fontSize: 9 },
       headStyles: { fillColor: [56, 128, 255] },

@@ -33,6 +33,12 @@ export class AttendanceService {
     return this.http.get<AttendanceDay[]>(`${this.base}/daily`, { params });
   }
 
+  // One employee's day rows from `from`..`to` (inclusive). Daily-page date-range filter.
+  range(employeeId: number, from: string, to: string): Observable<AttendanceDay[]> {
+    const params = new HttpParams().set('employeeId', employeeId).set('from', from).set('to', to);
+    return this.http.get<AttendanceDay[]>(`${this.base}/range`, { params });
+  }
+
   report(month: string, employeeId: number): Observable<MonthlyReport> {
     const params = new HttpParams().set('month', month).set('employeeId', employeeId);
     return this.http.get<MonthlyReport>(`${this.base}/report`, { params });

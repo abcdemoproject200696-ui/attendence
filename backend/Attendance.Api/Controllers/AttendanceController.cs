@@ -119,6 +119,33 @@ public class AttendanceController : ControllerBase
         return Ok(result);
     }
 
+    // -------------------- RANGE (one employee, many dates) --------------------
+    // Daily Attendance page filter: ek employee ki "from".."to" tak har din ki row.
+    [HttpGet("range")]
+    public async Task<ActionResult<IEnumerable<AttendanceDayDto>>> Range(
+        [FromQuery] int employeeId, [FromQuery] string from, [FromQuery] string to)
+    {
+        if (!TryParseDate(from, out var start)) return BadRequest("from must be yyyy-MM-dd.");
+        if (!TryParseDate(to, out var end)) return BadRequest("to must be yyyy-MM-dd.");
+        if (end < start) return BadRequest("'to' must be on/after 'from'.");
+        // Guard against accidentally huge ranges.
+        if ((end - start).TotalDays > 366) return BadRequest("Range too large (max 366 days).");
+
+        var employee = await _db.Employees.Include(e => e.Shift)
+            .FirstOrDefaultAsync(e => e.Id == employeeId);
+        if (employee is null) return NotFound();
+        var shift = employee.Shift ?? await _db.Shifts.FindAsync(employee.ShiftId);
+        if (shift is null) return BadRequest("Employee has no shift.");
+
+        var result = new List<AttendanceDayDto>();
+        for (var date = start; date <= end; date = date.AddDays(1))
+        {
+            var day = await _svc.ComputeTransientAsync(employee, shift, date);
+            result.Add(day.ToDto());
+        }
+        return Ok(result);
+    }
+
     // -------------------- RECOMPUTE --------------------
     [HttpPost("recompute")]
     public async Task<ActionResult<AttendanceDayDto>> Recompute(
@@ -180,6 +207,13 @@ public class AttendanceController : ControllerBase
         int paidHolidays = 0, unpaidHolidays = 0, paidLeaves = 0, unpaidLeaves = 0, weeklyOffs = 0;
         int totalNet = 0;
 
+        // A full working day = shift.RequiredMinutes (e.g. 480 = 8h). Salary is pro-rated by
+        // the ACTUAL hours worked: a worked day pays (min(net, required) / required) of a full
+        // day. So 3h worked on an 8h shift pays 3/8 of that day. >= full hours pays a full day
+        // (no overtime). Paid leave/holiday/weeklyOff still pay a full day each.
+        var requiredMinutes = shift.RequiredMinutes > 0 ? shift.RequiredMinutes : 480;
+        double payableWorkDays = 0;
+
         // Pass 2: count ONLY days inside [firstPresent, lastPresent]. Sundays / paid
         // holidays before the first present day (not joined/started yet) or after the
         // last present day (future "advance" days) are NOT paid; future days aren't
@@ -190,8 +224,14 @@ public class AttendanceController : ControllerBase
             totalNet += day.NetMinutes;
             switch (day.Status)
             {
-                case DayStatus.Present: presentDays++; break;
-                case DayStatus.HalfDay: halfDays++; break;
+                case DayStatus.Present:
+                    presentDays++;
+                    payableWorkDays += Math.Min(day.NetMinutes, requiredMinutes) / (double)requiredMinutes;
+                    break;
+                case DayStatus.HalfDay:
+                    halfDays++;
+                    payableWorkDays += Math.Min(day.NetMinutes, requiredMinutes) / (double)requiredMinutes;
+                    break;
                 case DayStatus.Absent: absentDays++; break;
                 case DayStatus.WeeklyOff: weeklyOffs++; break;
                 case DayStatus.Holiday:
@@ -205,20 +245,26 @@ public class AttendanceController : ControllerBase
             }
         }
 
-        var payableDays = presentDays + 0.5 * halfDays + paidHolidays + paidLeaves + weeklyOffs;
+        var payableDays = payableWorkDays + paidHolidays + paidLeaves + weeklyOffs;
 
-        // ----- Salary -----
+        // ----- Salary (hour-accurate) -----
         var monthlySalary = employee.MonthlySalary;
-        var perDaySalary = daysInMonth > 0 ? monthlySalary / daysInMonth : 0m;
+        var perDaySalary = daysInMonth > 0 ? monthlySalary / daysInMonth : 0m;          // e.g. 80000/30 = 2666.67
+        var perHourSalary = perDaySalary / (requiredMinutes / 60m);                     // e.g. 2666.67/8 = 333.33
         var earnedSalary = Math.Round(perDaySalary * (decimal)payableDays, 0, MidpointRounding.AwayFromZero);
-        var lossOfPay = Math.Round(
-            perDaySalary * (absentDays + unpaidLeaves + unpaidHolidays), 0, MidpointRounding.AwayFromZero);
+
+        // Loss of pay = absent/unpaid full days + the shortfall hours on worked-but-short days
+        // (e.g. a 3h present day on an 8h shift loses 5h => 5/8 of a day's pay).
+        var workedDayCount = presentDays + halfDays;
+        var lostDays = absentDays + unpaidLeaves + unpaidHolidays + (workedDayCount - payableWorkDays);
+        var lossOfPay = Math.Round(perDaySalary * (decimal)lostDays, 0, MidpointRounding.AwayFromZero);
         var netPayable = earnedSalary;
 
         var summary = new MonthlySummaryDto(
             presentDays, halfDays, absentDays, paidHolidays, unpaidHolidays,
             paidLeaves, unpaidLeaves, weeklyOffs, totalNet, payableDays,
-            monthlySalary, daysInMonth, perDaySalary, earnedSalary, lossOfPay, netPayable);
+            monthlySalary, daysInMonth, perDaySalary, earnedSalary, lossOfPay, netPayable,
+            requiredMinutes, perHourSalary, payableWorkDays);
 
         var report = new MonthlyReportDto(
             employee.Id, employee.Name, first.ToString("yyyy-MM"), dayDtos, summary);

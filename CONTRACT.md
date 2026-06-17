@@ -109,8 +109,11 @@ liya jaye (koi bhi ek match kare to bas). Punch request abhi bhi single `faceDes
 ### AttendanceDay  (calculated; manual override possible)
 ```
 { id, employeeId, employeeName, date:"2026-06-15",
-  firstIn, lastOut, grossMinutes, breakMinutes, lunchDeduction, netMinutes,
-  status:"Present", hasOpenSession:false, isManual:false, manualNote }
+  firstIn, lastOut, grossMinutes, breakMinutes,
+  lunchDeduction, lunchFrom, lunchTo,   // lunchFrom/lunchTo = exact auto-deducted window (ISO ts; null if 0)
+  netMinutes, status:"Present", hasOpenSession:false, isManual:false, manualNote }
+// lunchFrom/lunchTo are DISPLAY-only (NOT persisted; recomputed each calc -> no DB column).
+//   UI/PDF me dikhana: "Lunch (13:00-14:00) 1h auto-deducted, isliye 1 ghanta minus hua".
 ```
 
 ### Holiday
@@ -139,12 +142,21 @@ liya jaye (koi bhi ek match kare to bas). Punch request abhi bhi single `faceDes
              paidLeaves, unpaidLeaves, weeklyOffs, totalNetMinutes, payableDays,
              // ----- SALARY (admin) -----
              monthlySalary, totalDaysInMonth, perDaySalary,
-             earnedSalary, lossOfPay, netPayable } }
+             earnedSalary, lossOfPay, netPayable,
+             // ----- HOUR-BASED detail -----
+             requiredMinutesPerDay, perHourSalary, payableWorkDays } }
 ```
-**Salary formula:** `perDaySalary = monthlySalary / totalDaysInMonth`;
-`earnedSalary = round(perDaySalary * payableDays)`;
-`lossOfPay = round(perDaySalary * (absentDays + unpaidLeaves + unpaidHolidays))`;
-`netPayable = earnedSalary`. (payableDays = presentDays + 0.5*halfDays + paidHolidays + paidLeaves + weeklyOffs)
+**Salary formula (HOUR-ACCURATE):**
+- `perDaySalary = monthlySalary / totalDaysInMonth`  (e.g. 80000/30 = 2666.67)
+- `requiredMinutesPerDay = shift.requiredMinutes`  (e.g. 480 = 8h full day)
+- `perHourSalary = perDaySalary / (requiredMinutesPerDay/60)`  (e.g. 2666.67/8 = 333.33)
+- Har **worked day** (Present/HalfDay) ki payable fraction = `min(netMinutes, requiredMinutes) / requiredMinutes`
+  (8h+ = poora 1 din; 3h on 8h shift = 0.375 din; overtime cap = 1.0). `payableWorkDays = Σ in fractions`.
+- `payableDays = payableWorkDays + paidHolidays + paidLeaves + weeklyOffs`
+- `earnedSalary = round(perDaySalary * payableDays)`  (3h example: 2666.67*0.375 = 1000)
+- `lossOfPay = round(perDaySalary * (absentDays + unpaidLeaves + unpaidHolidays + (workedDays - payableWorkDays)))`
+  (worked-but-short din ka missing-hours wala hissa bhi loss me)
+- `netPayable = earnedSalary`
 
 ---
 
@@ -176,6 +188,8 @@ liya jaye (koi bhi ek match kare to bas). Punch request abhi bhi single `faceDes
 - `PUT /settings`  body:{faceMatchThreshold?, requireLiveness?} → AppSetting
 - `GET  /attendance/today/{employeeId}`     → AttendanceDay (aaj ka)
 - `GET  /attendance/daily?date=YYYY-MM-DD`  → AttendanceDay[] (sab employees us din)
+- `GET  /attendance/range?employeeId={id}&from=YYYY-MM-DD&to=YYYY-MM-DD` → AttendanceDay[]
+      (ek employee ki from..to tak har din ki row — Daily page ka date-range filter. max 366 din.)
 - `GET  /attendance/report?month=YYYY-MM&employeeId={id}` → MonthlyReport
 - `POST /attendance/recompute?date=YYYY-MM-DD&employeeId={id}` → AttendanceDay (dobara calc)
 

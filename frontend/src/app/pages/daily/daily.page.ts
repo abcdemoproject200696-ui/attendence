@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -30,7 +30,8 @@ import {
 import { addIcons } from 'ionicons';
 import { buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline, eyeOutline } from 'ionicons/icons';
 import { AttendanceService } from '../../core/attendance.service';
-import { AttendanceDay, AttendancePunch, DayStatus, Direction } from '../../core/models';
+import { EmployeeService } from '../../core/employee.service';
+import { AttendanceDay, AttendancePunch, DayStatus, Direction, Employee } from '../../core/models';
 import { fmtMinutes, fmtTime, todayIso } from '../../core/util';
 
 @Component({
@@ -66,14 +67,25 @@ import { fmtMinutes, fmtTime, todayIso } from '../../core/util';
 })
 export class DailyPage implements OnInit {
   private attendance = inject(AttendanceService);
+  private employeeSvc = inject(EmployeeService);
   private toastCtrl = inject(ToastController);
   private alertCtrl = inject(AlertController);
   private router = inject(Router);
 
-  date = todayIso();
+  // ===== Filters =====
+  // employeeId = null => "All employees" (single-date view). Set => that employee's
+  // rows for the whole startDate..endDate range.
+  employeeId: number | null = null;
+  startDate = todayIso();
+  endDate = todayIso();
+  employees = signal<Employee[]>([]);
+
   loading = signal(false);
   error = signal<string | null>(null);
   rows = signal<AttendanceDay[]>([]);
+
+  // Range mode = a single employee picked => first column shows the DATE (not the name).
+  rangeMode = computed(() => this.employeeId != null);
 
   readonly statuses: DayStatus[] = ['Present', 'HalfDay', 'Absent', 'Holiday', 'Leave', 'WeeklyOff'];
   readonly directions: Direction[] = ['IN', 'OUT'];
@@ -82,6 +94,7 @@ export class DailyPage implements OnInit {
   correctOpen = signal(false);
   correctEmployeeId = 0;
   correctEmployeeName = '';
+  correctDate = todayIso(); // the row's date being corrected (range mode -> per-row date)
   punches = signal<AttendancePunch[]>([]);
   punchesLoading = signal(false);
   savingPunch = signal(false);
@@ -103,6 +116,11 @@ export class DailyPage implements OnInit {
   }
 
   ngOnInit(): void {
+    // Load the employee dropdown (for the filter); failure is non-fatal (All-mode still works).
+    this.employeeSvc.getAll().subscribe({
+      next: (e) => this.employees.set(e),
+      error: () => {},
+    });
     this.load();
   }
 
@@ -111,6 +129,17 @@ export class DailyPage implements OnInit {
   }
   fmtTime(iso: string | null | undefined): string {
     return fmtTime(iso);
+  }
+
+  employeeName(): string {
+    return this.employees().find((e) => e.id === this.employeeId)?.name ?? '';
+  }
+
+  // "Mon 16 Jun" — compact label for the date column in range mode.
+  shortDate(iso: string): string {
+    const d = new Date(`${iso}T00:00:00`);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString([], { weekday: 'short', day: '2-digit', month: 'short' });
   }
 
   statusColor(s: DayStatus): string {
@@ -133,26 +162,36 @@ export class DailyPage implements OnInit {
   }
 
   load(): void {
-    if (!this.date) return;
+    if (!this.startDate) return;
+    // Keep endDate sane: never before startDate.
+    if (!this.endDate || this.endDate < this.startDate) this.endDate = this.startDate;
+
     this.loading.set(true);
     this.error.set(null);
-    this.attendance.daily(this.date).subscribe({
-      next: (r) => {
-        this.rows.set(r);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Could not load daily data. Is the backend running?');
-        this.loading.set(false);
-      },
-    });
+
+    const onErr = () => {
+      this.error.set('Could not load attendance data. Is the backend running?');
+      this.loading.set(false);
+    };
+    const onOk = (r: AttendanceDay[]) => {
+      this.rows.set(r);
+      this.loading.set(false);
+    };
+
+    if (this.employeeId != null) {
+      // One employee, full date range -> day-wise rows.
+      this.attendance.range(this.employeeId, this.startDate, this.endDate).subscribe({ next: onOk, error: onErr });
+    } else {
+      // All employees for the (single) start date.
+      this.attendance.daily(this.startDate).subscribe({ next: onOk, error: onErr });
+    }
   }
 
-  // Open the read-only daily detail page for one employee (View button).
+  // Open the read-only daily detail page for one employee+date (View button).
   viewDetail(row: AttendanceDay, event: Event): void {
     event.stopPropagation();
     this.router.navigate(['/attendance-detail'], {
-      queryParams: { employeeId: row.employeeId, date: this.date, name: row.employeeName },
+      queryParams: { employeeId: row.employeeId, date: row.date, name: row.employeeName },
     });
   }
 
@@ -160,6 +199,7 @@ export class DailyPage implements OnInit {
   openCorrect(row: AttendanceDay): void {
     this.correctEmployeeId = row.employeeId;
     this.correctEmployeeName = row.employeeName;
+    this.correctDate = row.date;
     this.overrideNet = row.isManual ? row.netMinutes : null;
     this.overrideStatus = row.isManual ? row.status : '';
     this.overrideNote = row.manualNote ?? '';
@@ -174,7 +214,7 @@ export class DailyPage implements OnInit {
 
   private loadPunches(): void {
     this.punchesLoading.set(true);
-    this.attendance.getPunches(this.date, this.correctEmployeeId).subscribe({
+    this.attendance.getPunches(this.correctDate, this.correctEmployeeId).subscribe({
       next: (p) => {
         this.punches.set(p);
         this.punchesLoading.set(false);
@@ -200,10 +240,10 @@ export class DailyPage implements OnInit {
     this.punchNote = p.note ?? '';
   }
 
-  // Combine selected date + "HH:mm" into a local ISO-ish timestamp "yyyy-MM-ddTHH:mm:00".
+  // Combine the row's date + "HH:mm" into a local ISO-ish timestamp "yyyy-MM-ddTHH:mm:00".
   private buildTimestamp(): string | null {
     if (!/^\d{2}:\d{2}$/.test(this.punchTime)) return null;
-    return `${this.date}T${this.punchTime}:00`;
+    return `${this.correctDate}T${this.punchTime}:00`;
   }
 
   savePunch(): void {
@@ -265,7 +305,7 @@ export class DailyPage implements OnInit {
     this.attendance
       .overrideDay({
         employeeId: this.correctEmployeeId,
-        date: this.date,
+        date: this.correctDate,
         netMinutes: this.overrideNet ?? undefined,
         status: this.overrideStatus || undefined,
         manualNote: this.overrideNote,
@@ -284,7 +324,7 @@ export class DailyPage implements OnInit {
   }
 
   recompute(): void {
-    this.attendance.recompute(this.date, this.correctEmployeeId).subscribe({
+    this.attendance.recompute(this.correctDate, this.correctEmployeeId).subscribe({
       next: () => {
         this.load();
         this.toast('Recomputed from punches.', 'success');

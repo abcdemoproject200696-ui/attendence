@@ -98,6 +98,24 @@ export class AttendanceDetailPage implements OnInit {
   inCount = computed(() => this.punches().filter((p) => p.direction === 'IN').length);
   outCount = computed(() => this.punches().filter((p) => p.direction === 'OUT').length);
 
+  // ===== Lunch auto-deduction (for the "kyu 1 ghanta minus hua" explanation) =====
+  lunchMinutes = computed(() => this.day()?.lunchDeduction ?? 0);
+  hasLunchCut = computed(() => this.lunchMinutes() > 0);
+  // "1:00 PM - 2:00 PM" style window that was deducted.
+  lunchRange = computed(() => {
+    const d = this.day();
+    if (!d?.lunchFrom || !d?.lunchTo) return '';
+    return `${fmtTime(d.lunchFrom)} - ${fmtTime(d.lunchTo)}`;
+  });
+  // Gross (time physically in office) before the lunch cut.
+  grossMinutes = computed(() => this.day()?.grossMinutes ?? 0);
+  // One-line reason shown in the UI + PDF.
+  lunchReason = computed(() =>
+    this.hasLunchCut()
+      ? `Lunch break (${this.lunchRange()}) ${this.fmtMin(this.lunchMinutes())} auto-deducted — full day me lunch unpaid hai.`
+      : 'No lunch deduction (employee was not in office during the lunch window).',
+  );
+
   // Pair consecutive IN -> OUT into sessions; a trailing IN with no OUT is "still in".
   sessions = computed<Session[]>(() => {
     const sorted = [...this.punches()].sort(
@@ -227,15 +245,36 @@ export class AttendanceDetailPage implements OnInit {
         ['Checked Out', `${this.outCount()} time(s)`],
         ['First In', fmtTime(d?.firstIn)],
         ['Last Out', fmtTime(d?.lastOut)],
-        ['Total Time In Office', fmtMinutes(d?.netMinutes ?? 0)],
-        ['Gross', fmtMinutes(d?.grossMinutes ?? 0)],
-        ['Break', fmtMinutes(d?.breakMinutes ?? 0)],
+        ['Time In Office (Gross)', fmtMinutes(this.grossMinutes())],
+        ['Break (washroom etc.)', fmtMinutes(d?.breakMinutes ?? 0)],
+        [
+          this.hasLunchCut() ? `Lunch Deducted (${this.lunchRange()})` : 'Lunch Deducted',
+          this.hasLunchCut() ? `- ${fmtMinutes(this.lunchMinutes())}` : 'None',
+        ],
+        ['TOTAL PAYABLE HOURS', fmtMinutes(d?.netMinutes ?? 0)],
       ],
       styles: { fontSize: 9 },
       headStyles: { fillColor: [56, 128, 255] },
+      didParseCell: (data) => {
+        // Bold the final "total payable hours" row.
+        if (data.section === 'body' && data.row.index === 8) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [224, 247, 233];
+        }
+      },
     });
 
+    // Why was 1 hour minus? — spelled out for the employee.
+    doc.setFontSize(9);
+    const lastY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    const note = this.hasLunchCut()
+      ? `Note: Lunch break ${this.lunchRange()} (${fmtMinutes(this.lunchMinutes())}) is auto-deducted because it is unpaid. Total payable hours = time in office minus lunch.`
+      : 'Note: No lunch was deducted for this day.';
+    const noteLines = doc.splitTextToSize(note, 180) as string[];
+    doc.text(noteLines, 14, lastY);
+
     autoTable(doc, {
+      startY: lastY + noteLines.length * 5 + 4,
       head: [['#', 'Direction', 'Time']],
       body: this.sortedPunches().map((p, i) => [
         String(i + 1),

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Attendance.Domain.Entities;
 
 public class AttendanceDay
@@ -16,6 +18,14 @@ public class AttendanceDay
     public int GrossMinutes { get; set; }
     public int BreakMinutes { get; set; }
     public int LunchDeduction { get; set; }
+
+    /// <summary>
+    /// The exact auto-deducted lunch window (for display only). NOT persisted — it is
+    /// recomputed from punches every time the day is calculated, so no DB column / migration.
+    /// </summary>
+    [NotMapped] public DateTime? LunchFrom { get; set; }
+    [NotMapped] public DateTime? LunchTo { get; set; }
+
     public int NetMinutes { get; set; }
 
     public DayStatus Status { get; set; }

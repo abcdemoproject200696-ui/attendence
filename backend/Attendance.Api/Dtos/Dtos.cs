@@ -114,7 +114,8 @@ public class ManualPunchUpdateDto
 public record AttendanceDayDto(
     int Id, int EmployeeId, string? EmployeeName, string Date,
     DateTime? FirstIn, DateTime? LastOut, int GrossMinutes, int BreakMinutes,
-    int LunchDeduction, int NetMinutes, string Status, bool HasOpenSession,
+    int LunchDeduction, DateTime? LunchFrom, DateTime? LunchTo,
+    int NetMinutes, string Status, bool HasOpenSession,
     bool IsManual, string? ManualNote);
 
 public class DayOverrideDto
@@ -177,7 +178,9 @@ public record MonthlySummaryDto(
     int PaidLeaves, int UnpaidLeaves, int WeeklyOffs, int TotalNetMinutes, double PayableDays,
     // ----- SALARY (admin) -----
     decimal MonthlySalary, int TotalDaysInMonth, decimal PerDaySalary,
-    decimal EarnedSalary, decimal LossOfPay, decimal NetPayable);
+    decimal EarnedSalary, decimal LossOfPay, decimal NetPayable,
+    // ----- HOUR-BASED salary detail -----
+    int RequiredMinutesPerDay, decimal PerHourSalary, double PayableWorkDays);
 
 public record MonthlyReportDto(
     int EmployeeId, string? EmployeeName, string Month,

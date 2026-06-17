@@ -56,3 +56,30 @@ h3 {
   vertical-align: middle;
   margin-right: 2px;
 }
+
+.total-card .calc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+  border-bottom: 1px dashed var(--ion-color-step-100, #eee);
+}
+
+.total-card .calc-row.minus {
+  color: var(--ion-color-warning-shade, #b88a00);
+}
+
+.total-card .calc-row.total {
+  border-bottom: none;
+  border-top: 2px solid var(--ion-color-step-200, #ccc);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.total-card .reason {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}

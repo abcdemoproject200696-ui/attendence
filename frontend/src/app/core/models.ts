@@ -117,6 +117,8 @@ export interface AttendanceDay {
   grossMinutes: number;
   breakMinutes: number;
   lunchDeduction: number;
+  lunchFrom?: string | null; // ISO timestamp — start of auto-deducted lunch window
+  lunchTo?: string | null; // ISO timestamp — end of auto-deducted lunch window
   netMinutes: number;
   status: DayStatus;
   hasOpenSession: boolean;
@@ -185,6 +187,10 @@ export interface MonthlySummary {
   earnedSalary: number;
   lossOfPay: number;
   netPayable: number;
+  // ===== Hour-based salary detail =====
+  requiredMinutesPerDay: number; // a full working day, e.g. 480 = 8h
+  perHourSalary: number; // perDaySalary / (requiredMinutesPerDay/60)
+  payableWorkDays: number; // sum of hour-fractions of worked days (caps each day at 1.0)
 }
 
 export interface MonthlyReport {

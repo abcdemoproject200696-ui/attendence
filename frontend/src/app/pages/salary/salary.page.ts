@@ -153,6 +153,16 @@ export class SalaryPage implements OnInit {
     return `₹${(n ?? 0).toLocaleString('en-IN')}`;
   }
 
+  // Money WITH 2 decimals — for per-day / per-hour where paise matter (e.g. ₹2,666.67).
+  inrDec(n: number): string {
+    return `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // A full working day in hours, e.g. 480 min -> "8".
+  reqHours(min: number): string {
+    return (min / 60).toFixed(min % 60 === 0 ? 0 : 1);
+  }
+
   generate(): void {
     if (this.employeeId == null || !this.month) {
       this.error.set('Please select both month and employee.');
@@ -205,14 +215,17 @@ export class SalaryPage implements OnInit {
       headStyles: { fillColor: [56, 128, 255] },
     });
 
-    // Salary breakdown
+    // Salary breakdown — hour-accurate (per-day -> per-hour -> payable).
     autoTable(doc, {
       head: [['Salary Breakdown', 'Amount']],
       body: [
         ['Monthly Salary', this.inr(s.monthlySalary)],
         ['Total Days In Month', String(s.totalDaysInMonth)],
-        ['Per Day Salary', this.inr(Math.round(s.perDaySalary))],
-        ['Payable Days', String(s.payableDays)],
+        ['Per Day Salary', this.inrDec(s.perDaySalary)],
+        [`Working Hours / Day`, `${this.reqHours(s.requiredMinutesPerDay)} h`],
+        ['Per Hour Salary', this.inrDec(s.perHourSalary)],
+        ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
+        ['Payable Days (hour-based)', s.payableDays.toFixed(2)],
         ['Earned Salary', this.inr(s.earnedSalary)],
         ['Loss Of Pay', this.inr(s.lossOfPay)],
         ['NET PAYABLE', this.inr(s.netPayable)],
@@ -220,12 +233,22 @@ export class SalaryPage implements OnInit {
       styles: { fontSize: 10 },
       headStyles: { fillColor: [45, 211, 111] },
       didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 6) {
+        if (data.section === 'body' && data.row.index === 9) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [224, 247, 233];
         }
       },
     });
+
+    // Show the exact formula so the slip is self-explanatory.
+    const lastY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    doc.setFontSize(8);
+    const formula =
+      `Calculation: Per Day = Monthly / ${s.totalDaysInMonth} = ${this.inrDec(s.perDaySalary)}. ` +
+      `Per Hour = Per Day / ${this.reqHours(s.requiredMinutesPerDay)}h = ${this.inrDec(s.perHourSalary)}. ` +
+      `Earned = Per Day x Payable Days (${s.payableDays.toFixed(2)}) = ${this.inr(s.earnedSalary)}. ` +
+      `Worked days are paid by actual hours (hours worked / ${this.reqHours(s.requiredMinutesPerDay)}h), capped at a full day.`;
+    doc.text(doc.splitTextToSize(formula, 180) as string[], 14, lastY);
 
     doc.save(`salary-slip-${r.employeeName}-${r.month}.pdf`);
     this.toast('Salary slip PDF downloaded.', 'success');

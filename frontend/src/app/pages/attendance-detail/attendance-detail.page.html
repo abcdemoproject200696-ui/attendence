@@ -55,7 +55,7 @@
       </ion-col>
       <ion-col size="6" size-md="3">
         <div class="stat">
-          <span class="label">Total In Office</span>
+          <span class="label">Total Payable Hours</span>
           <span class="value strong">{{ fmtMin(day()?.netMinutes ?? 0) }}</span>
         </div>
       </ion-col>
@@ -67,6 +67,33 @@
       </ion-col>
     </ion-row>
   </ion-grid>
+
+  <!-- ===== Total hours + lunch deduction explanation ===== -->
+  <ion-card class="total-card">
+    <ion-card-header>
+      <ion-card-subtitle>Total Hours Calculation</ion-card-subtitle>
+      <ion-card-title>{{ fmtMin(day()?.netMinutes ?? 0) }} payable</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="calc-row">
+        <span>Time in office (gross)</span>
+        <strong>{{ fmtMin(grossMinutes()) }}</strong>
+      </div>
+      @if (hasLunchCut()) {
+      <div class="calc-row minus">
+        <span>Lunch deducted ({{ lunchRange() }})</span>
+        <strong>− {{ fmtMin(lunchMinutes()) }}</strong>
+      </div>
+      }
+      <div class="calc-row total">
+        <span>Total payable hours</span>
+        <strong>{{ fmtMin(day()?.netMinutes ?? 0) }}</strong>
+      </div>
+      <ion-text [color]="hasLunchCut() ? 'warning' : 'medium'">
+        <p class="reason">{{ lunchReason() }}</p>
+      </ion-text>
+    </ion-card-content>
+  </ion-card>
 
   <!-- ===== All punches ===== -->
   <h3>Punches</h3>

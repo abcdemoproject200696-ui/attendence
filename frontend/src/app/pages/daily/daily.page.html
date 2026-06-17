@@ -9,16 +9,55 @@
 
 <ion-content class="ion-padding">
   <ion-grid>
-    <ion-row class="ion-align-items-center">
-      <ion-col size="8" size-md="4">
+    <ion-row class="ion-align-items-end">
+      <ion-col size="12" size-md="4">
         <ion-item>
-          <ion-input type="date" label="Date" labelPlacement="stacked" [(ngModel)]="date" (ionChange)="load()"></ion-input>
+          <ion-select
+            label="Employee"
+            labelPlacement="stacked"
+            [(ngModel)]="employeeId"
+            (ionChange)="load()"
+            placeholder="All employees"
+          >
+            <ion-select-option [value]="null">All employees</ion-select-option>
+            @for (e of employees(); track e.id) {
+            <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
+            }
+          </ion-select>
         </ion-item>
       </ion-col>
-      <ion-col size="4" size-md="2">
+      <ion-col size="6" size-md="3">
+        <ion-item>
+          <ion-input type="date" label="From date" labelPlacement="stacked" [(ngModel)]="startDate" (ionChange)="load()"></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="6" size-md="3">
+        <ion-item>
+          <ion-input
+            type="date"
+            label="To date"
+            labelPlacement="stacked"
+            [(ngModel)]="endDate"
+            [disabled]="employeeId == null"
+            (ionChange)="load()"
+          ></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="12" size-md="2">
         <ion-button expand="block" (click)="load()" [disabled]="loading()">
           <ion-icon slot="start" name="refresh-outline"></ion-icon> Load
         </ion-button>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size="12">
+        <ion-text color="medium">
+          @if (rangeMode()) {
+          <p class="hint">Showing <strong>{{ employeeName() }}</strong> from {{ shortDate(startDate) }} to {{ shortDate(endDate) }} — one row per day. Tap eye to view a day.</p>
+          } @else {
+          <p class="hint">Showing <strong>all employees</strong> for {{ shortDate(startDate) }}. Pick an employee to filter a date range.</p>
+          }
+        </ion-text>
       </ion-col>
     </ion-row>
   </ion-grid>
@@ -34,7 +73,7 @@
   <div class="table-wrap">
     <ion-grid class="att-table">
       <ion-row class="thead">
-        <ion-col size="2.5">Employee</ion-col>
+        <ion-col size="2.5">{{ rangeMode() ? 'Date' : 'Employee' }}</ion-col>
         <ion-col size="1.5">In</ion-col>
         <ion-col size="1.5">Out</ion-col>
         <ion-col size="1.5">Gross</ion-col>
@@ -43,10 +82,10 @@
         <ion-col size="1.5">Status</ion-col>
         <ion-col size="1">View</ion-col>
       </ion-row>
-      @for (r of rows(); track r.id || r.employeeId) {
+      @for (r of rows(); track r.id || r.date) {
       <ion-row class="trow" (click)="openCorrect(r)">
         <ion-col size="2.5">
-          {{ r.employeeName }}
+          {{ rangeMode() ? shortDate(r.date) : r.employeeName }}
           @if (r.isManual) { <ion-badge color="warning">manual</ion-badge> }
           @if (r.hasOpenSession) { <ion-badge color="danger">open</ion-badge> }
         </ion-col>
@@ -81,7 +120,7 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
-        <ion-text><h2>{{ correctEmployeeName }} — {{ date }}</h2></ion-text>
+        <ion-text><h2>{{ correctEmployeeName }} — {{ correctDate }}</h2></ion-text>
 
         <h3>Punches</h3>
         @if (punchesLoading()) { <ion-spinner></ion-spinner> }

@@ -27,6 +27,7 @@ public static class Mapping
     public static AttendanceDayDto ToDto(this AttendanceDay d) => new(
         d.Id, d.EmployeeId, d.Employee?.Name, d.Date.ToString(DateFmt),
         d.FirstIn, d.LastOut, d.GrossMinutes, d.BreakMinutes, d.LunchDeduction,
+        d.LunchFrom, d.LunchTo,
         d.NetMinutes, d.Status.ToString(), d.HasOpenSession, d.IsManual, d.ManualNote);
 
     public static HolidayDto ToDto(this Holiday h) => new(

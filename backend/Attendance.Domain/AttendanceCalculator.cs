@@ -40,12 +40,20 @@ public static class AttendanceCalculator
         }
 
         // Step 5: lunch auto-deduct = sum of overlap(session, lunch window).
+        // Also remember the actual deducted window (earliest start .. latest end) so the
+        // UI/PDF can SHOW the employee exactly which 1 hour was minus and why.
         var lunchDeduction = 0;
+        DateTime? lunchFrom = null;
+        DateTime? lunchTo = null;
         if (policy.AutoDeductLunch)
         {
             foreach (var s in sessions)
             {
-                lunchDeduction += LunchOverlapMinutes(s.In, s.Out, policy);
+                var (mins, overlapStart, overlapEnd) = LunchOverlap(s.In, s.Out, policy);
+                if (mins <= 0) continue;
+                lunchDeduction += mins;
+                if (lunchFrom is null || overlapStart < lunchFrom) lunchFrom = overlapStart;
+                if (lunchTo is null || overlapEnd > lunchTo) lunchTo = overlapEnd;
             }
         }
 
@@ -63,6 +71,8 @@ public static class AttendanceCalculator
             GrossMinutes = grossMinutes,
             BreakMinutes = breakMinutes,
             LunchDeduction = lunchDeduction,
+            LunchFrom = lunchFrom,
+            LunchTo = lunchTo,
             NetMinutes = netMinutes,
             Status = status,
             HasOpenSession = hasOpenSession
@@ -124,9 +134,12 @@ public static class AttendanceCalculator
     }
 
     /// <summary>
-    /// Overlap (in minutes) between a session and the lunch window of its calendar day.
+    /// Overlap between a session and the lunch window of its calendar day.
+    /// Returns the overlap minutes plus the actual overlapped [start, end] interval
+    /// (so callers can display the exact deducted window). Minutes is 0 when no overlap.
     /// </summary>
-    private static int LunchOverlapMinutes(DateTime sessionIn, DateTime sessionOut, ShiftPolicy policy)
+    private static (int Minutes, DateTime Start, DateTime End) LunchOverlap(
+        DateTime sessionIn, DateTime sessionOut, ShiftPolicy policy)
     {
         var dayStart = sessionIn.Date;
         var lunchStart = dayStart.AddMinutes(policy.LunchStartMinutes);
@@ -135,8 +148,8 @@ public static class AttendanceCalculator
         var overlapStart = sessionIn > lunchStart ? sessionIn : lunchStart;
         var overlapEnd = sessionOut < lunchEnd ? sessionOut : lunchEnd;
 
-        if (overlapEnd <= overlapStart) return 0;
-        return (int)Math.Round((overlapEnd - overlapStart).TotalMinutes);
+        if (overlapEnd <= overlapStart) return (0, overlapStart, overlapStart);
+        return ((int)Math.Round((overlapEnd - overlapStart).TotalMinutes), overlapStart, overlapEnd);
     }
 
     private static DayStatus ResolveStatus(

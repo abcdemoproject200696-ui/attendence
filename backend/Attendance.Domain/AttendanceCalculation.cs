@@ -8,6 +8,13 @@ public sealed class AttendanceCalculation
     public int GrossMinutes { get; init; }
     public int BreakMinutes { get; init; }
     public int LunchDeduction { get; init; }
+
+    /// <summary>Start of the auto-deducted lunch window (null when nothing was deducted).</summary>
+    public DateTime? LunchFrom { get; init; }
+
+    /// <summary>End of the auto-deducted lunch window (null when nothing was deducted).</summary>
+    public DateTime? LunchTo { get; init; }
+
     public int NetMinutes { get; init; }
     public DayStatus Status { get; init; }
     public bool HasOpenSession { get; init; }
