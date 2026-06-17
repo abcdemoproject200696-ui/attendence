@@ -247,9 +247,30 @@ export class SalaryPage implements OnInit {
     doc.setTextColor(...MUTED);
     doc.text(`Employee Code: ${this.employeeCode()}`, 14, 51);
 
+    // ===== Status badges (mirror the on-screen card: Present / Half / Absent / Leaves) =====
+    const badges: Array<{ label: string; color: [number, number, number] }> = [
+      { label: `Present ${s.presentDays}`, color: GREEN },
+      { label: `Half ${s.halfDays}`, color: [255, 196, 9] },
+      { label: `Absent ${s.absentDays}`, color: [235, 68, 90] },
+      { label: `Leaves ${s.paidLeaves + s.unpaidLeaves}`, color: BLUE },
+    ];
+    const bY = 56;
+    const bH = 10;
+    const bGap = 4;
+    const bW = (pageW - 28 - bGap * 3) / 4;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    badges.forEach((b, i) => {
+      const x = 14 + i * (bW + bGap);
+      doc.setFillColor(...b.color);
+      doc.roundedRect(x, bY, bW, bH, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.text(b.label, x + bW / 2, bY + bH / 2, { align: 'center', baseline: 'middle' });
+    });
+
     // ===== Attendance summary =====
     autoTable(doc, {
-      startY: 57,
+      startY: bY + bH + 8,
       head: [['Attendance', 'Value']],
       body: [
         ['Present Days', String(s.presentDays)],
