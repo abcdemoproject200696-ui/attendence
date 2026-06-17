@@ -55,14 +55,14 @@
       </ion-col>
       <ion-col size="6" size-md="3">
         <div class="stat">
-          <span class="label">Total Payable Hours</span>
-          <span class="value strong">{{ fmtMin(day()?.netMinutes ?? 0) }}</span>
+          <span class="label">Time In Office</span>
+          <span class="value">{{ fmtMin(grossMinutes()) }}</span>
         </div>
       </ion-col>
       <ion-col size="6" size-md="3">
         <div class="stat">
-          <span class="label">Gross / Break</span>
-          <span class="value">{{ fmtMin(day()?.grossMinutes ?? 0) }} / {{ fmtMin(day()?.breakMinutes ?? 0) }}</span>
+          <span class="label">Total Payable Hours</span>
+          <span class="value strong">{{ fmtMin(day()?.netMinutes ?? 0) }}</span>
         </div>
       </ion-col>
     </ion-row>
@@ -76,7 +76,7 @@
     </ion-card-header>
     <ion-card-content>
       <div class="calc-row">
-        <span>Time in office (gross)</span>
+        <span>Time in office (in/out)</span>
         <strong>{{ fmtMin(grossMinutes()) }}</strong>
       </div>
       @if (hasLunchCut()) {

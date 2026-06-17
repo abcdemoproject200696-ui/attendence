@@ -306,6 +306,69 @@ public class AttendanceCalculatorTests
         Assert.Equal(540, r.NetMinutes);
     }
 
+    // ========== Real-world 2 PM - 3 PM lunch cases (user scenarios) ==========
+    private static ShiftPolicy LunchTwoToThree(bool autoLunch = true) => Policy(
+        autoLunch: autoLunch, required: 480, halfDay: 240,
+        lunchStart: 14 * 60, lunchEnd: 15 * 60);
+
+    [Fact]
+    public void Lunch2to3_BackInDuringLunch_LunchHourStillExcluded()
+    {
+        // IN 10:00, OUT 14:00 (lunch), back IN 14:20, OUT 19:00.
+        // Morning 4h + afternoon 14:20-19:00 (4h40m) = 8h40m gross; only the 14:20-15:00
+        // slice (40m) falls in lunch and is deducted => net exactly 8h.
+        var punches = new[]
+        {
+            P("10:00", Direction.IN), P("14:00", Direction.OUT),
+            P("14:20", Direction.IN), P("19:00", Direction.OUT),
+        };
+        var r = AttendanceCalculator.Compute(punches, LunchTwoToThree(), Ctx());
+
+        Assert.Equal(520, r.GrossMinutes);
+        Assert.Equal(40, r.LunchDeduction);
+        Assert.Equal(480, r.NetMinutes); // 8h
+        Assert.Equal(DayStatus.Present, r.Status);
+    }
+
+    [Fact]
+    public void Lunch2to3_StraightThrough_DeductsFullHour()
+    {
+        // IN 10:00 -> OUT 19:00 = 9h; lunch 1h => 8h. Window shown is 14:00-15:00.
+        var punches = new[] { P("10:00", Direction.IN), P("19:00", Direction.OUT) };
+        var r = AttendanceCalculator.Compute(punches, LunchTwoToThree(), Ctx());
+
+        Assert.Equal(540, r.GrossMinutes);
+        Assert.Equal(60, r.LunchDeduction);
+        Assert.Equal(480, r.NetMinutes);
+        Assert.Equal(Day.AddHours(14), r.LunchFrom);
+        Assert.Equal(Day.AddHours(15), r.LunchTo);
+    }
+
+    [Fact]
+    public void Lunch2to3_Overtime_ExtraHoursShowInNet()
+    {
+        // IN 10:00 -> OUT 21:00 = 11h; lunch 1h => 10h net (2h overtime visible).
+        var punches = new[] { P("10:00", Direction.IN), P("21:00", Direction.OUT) };
+        var r = AttendanceCalculator.Compute(punches, LunchTwoToThree(), Ctx());
+
+        Assert.Equal(660, r.GrossMinutes);
+        Assert.Equal(60, r.LunchDeduction);
+        Assert.Equal(600, r.NetMinutes); // 10h
+    }
+
+    [Fact]
+    public void Lunch2to3_LeavesBeforeLunch_NoDeduction()
+    {
+        // Half-day: IN 10:00 -> OUT 13:00 (leaves before 2 PM lunch) => no lunch cut.
+        var punches = new[] { P("10:00", Direction.IN), P("13:00", Direction.OUT) };
+        var r = AttendanceCalculator.Compute(punches, LunchTwoToThree(), Ctx());
+
+        Assert.Equal(180, r.GrossMinutes);
+        Assert.Equal(0, r.LunchDeduction);
+        Assert.Null(r.LunchFrom);
+        Assert.Equal(180, r.NetMinutes);
+    }
+
     // ---------- Unsorted input still computed correctly ----------
     [Fact]
     public void UnsortedPunches_SortedBeforeComputing()

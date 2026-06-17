@@ -226,14 +226,12 @@ export class SalaryPage implements OnInit {
         ['Per Hour Salary', this.inrDec(s.perHourSalary)],
         ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
         ['Payable Days (hour-based)', s.payableDays.toFixed(2)],
-        ['Earned Salary', this.inr(s.earnedSalary)],
-        ['Loss Of Pay', this.inr(s.lossOfPay)],
         ['NET PAYABLE', this.inr(s.netPayable)],
       ],
       styles: { fontSize: 10 },
       headStyles: { fillColor: [45, 211, 111] },
       didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 9) {
+        if (data.section === 'body' && data.row.index === 7) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [224, 247, 233];
         }

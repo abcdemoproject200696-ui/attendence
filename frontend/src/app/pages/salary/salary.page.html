@@ -99,8 +99,6 @@
         <div class="brow"><span>Per Hour Salary</span><strong>{{ inrDec(r.summary.perHourSalary) }}</strong></div>
         <div class="brow"><span>Total Hours Worked</span><strong>{{ fmtMin(r.summary.totalNetMinutes) }}</strong></div>
         <div class="brow"><span>Payable Days (hour-based)</span><strong>{{ r.summary.payableDays.toFixed(2) }}</strong></div>
-        <div class="brow"><span>Earned Salary</span><strong>{{ inr(r.summary.earnedSalary) }}</strong></div>
-        <div class="brow loss"><span>Loss Of Pay</span><strong>- {{ inr(r.summary.lossOfPay) }}</strong></div>
         <div class="brow net"><span>NET PAYABLE</span><strong>{{ inr(r.summary.netPayable) }}</strong></div>
       </div>
 

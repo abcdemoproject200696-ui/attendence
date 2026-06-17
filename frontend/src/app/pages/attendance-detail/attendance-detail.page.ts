@@ -245,8 +245,7 @@ export class AttendanceDetailPage implements OnInit {
         ['Checked Out', `${this.outCount()} time(s)`],
         ['First In', fmtTime(d?.firstIn)],
         ['Last Out', fmtTime(d?.lastOut)],
-        ['Time In Office (Gross)', fmtMinutes(this.grossMinutes())],
-        ['Break (washroom etc.)', fmtMinutes(d?.breakMinutes ?? 0)],
+        ['Time In Office (in/out)', fmtMinutes(this.grossMinutes())],
         [
           this.hasLunchCut() ? `Lunch Deducted (${this.lunchRange()})` : 'Lunch Deducted',
           this.hasLunchCut() ? `- ${fmtMinutes(this.lunchMinutes())}` : 'None',
@@ -257,7 +256,7 @@ export class AttendanceDetailPage implements OnInit {
       headStyles: { fillColor: [56, 128, 255] },
       didParseCell: (data) => {
         // Bold the final "total payable hours" row.
-        if (data.section === 'body' && data.row.index === 8) {
+        if (data.section === 'body' && data.row.index === 7) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [224, 247, 233];
         }

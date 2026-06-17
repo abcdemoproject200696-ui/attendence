@@ -53,7 +53,7 @@ public class AttendanceService
 
         var context = await BuildContextAsync(employeeId, date, shift);
         var policy = ShiftPolicy.FromShift(shift);
-        var calc = AttendanceCalculator.Compute(punches, policy, context);
+        var calc = AttendanceCalculator.Compute(ToBusinessLocal(punches), policy, context);
 
         if (dayEntity == null)
         {
@@ -65,6 +65,22 @@ public class AttendanceService
         await _db.SaveChangesAsync();
         return dayEntity;
     }
+
+    /// <summary>
+    /// Copy punches with their timestamps converted to business-local (IST) wall-clock, so
+    /// the calculator's fixed lunch window (e.g. 13:00-14:00) is in IST — not the server's UTC.
+    /// </summary>
+    private static List<AttendancePunch> ToBusinessLocal(IEnumerable<AttendancePunch> punches) =>
+        punches.Select(p => new AttendancePunch
+        {
+            Id = p.Id,
+            EmployeeId = p.EmployeeId,
+            Timestamp = BusinessClock.ToLocal(p.Timestamp),
+            Direction = p.Direction,
+            DeviceId = p.DeviceId,
+            Source = p.Source,
+            Note = p.Note,
+        }).ToList();
 
     private static void ApplyCalc(AttendanceDay day, AttendanceCalculation calc)
     {
@@ -119,7 +135,7 @@ public class AttendanceService
 
         var context = await BuildContextAsync(employee.Id, date, shift);
         var policy = ShiftPolicy.FromShift(shift);
-        var calc = AttendanceCalculator.Compute(punches, policy, context);
+        var calc = AttendanceCalculator.Compute(ToBusinessLocal(punches), policy, context);
 
         var day = new AttendanceDay { EmployeeId = employee.Id, Employee = employee, Date = date };
         ApplyCalc(day, calc);
