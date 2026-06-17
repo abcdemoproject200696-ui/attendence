@@ -183,70 +183,125 @@ export class SalaryPage implements OnInit {
     });
   }
 
+  // Last drawn autoTable's bottom Y (typed accessor for jsPDF + autotable plugin).
+  private finalY(doc: jsPDF): number {
+    return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  }
+
   exportSlipPdf(): void {
     const r = this.report();
     if (!r) return;
     const s = r.summary;
     const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
 
-    doc.setFontSize(18);
-    doc.text('Salary Slip', 14, 18);
+    // Brand palette (matches the on-screen card).
+    const GREEN: [number, number, number] = [45, 211, 111];
+    const GREEN_SOFT: [number, number, number] = [232, 248, 239];
+    const BLUE: [number, number, number] = [56, 128, 255];
+    const BLUE_SOFT: [number, number, number] = [235, 242, 255];
+    const INK: [number, number, number] = [33, 37, 41];
+    const MUTED: [number, number, number] = [120, 120, 120];
+    const reqH = this.reqHours(s.requiredMinutesPerDay);
+
+    // ===== Coloured header band =====
+    doc.setFillColor(...GREEN);
+    doc.rect(0, 0, pageW, 32, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('SALARY SLIP', 14, 16);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    doc.text(`Employee: ${r.employeeName} (${this.employeeCode()})`, 14, 28);
-    doc.text(`Month: ${r.month}`, 14, 35);
+    doc.text(`Month: ${r.month}`, 14, 25);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Attendance System', pageW - 14, 16, { align: 'right' });
 
-    // Attendance summary
+    // ===== Employee identity =====
+    doc.setTextColor(...INK);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(r.employeeName, 14, 45);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...MUTED);
+    doc.text(`Employee Code: ${this.employeeCode()}`, 14, 51);
+
+    // ===== Attendance summary =====
     autoTable(doc, {
-      startY: 42,
-      head: [['Attendance', 'Value']],
+      startY: 57,
+      head: [['Attendance', 'Days']],
       body: [
         ['Present Days', String(s.presentDays)],
         ['Half Days', String(s.halfDays)],
         ['Absent Days', String(s.absentDays)],
         ['Paid Leaves', String(s.paidLeaves)],
-        ['Unpaid Leaves', String(s.unpaidLeaves)],
         ['Paid Holidays', String(s.paidHolidays)],
-        ['Unpaid Holidays', String(s.unpaidHolidays)],
         ['Weekly Offs', String(s.weeklyOffs)],
-        ['Payable Days', String(s.payableDays)],
-        ['Total Net Hours', fmtMinutes(s.totalNetMinutes)],
+        ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
+        ['Payable Days', s.payableDays.toFixed(2)],
       ],
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [56, 128, 255] },
+      theme: 'striped',
+      styles: { fontSize: 9.5, cellPadding: 2.6, textColor: INK },
+      headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: BLUE_SOFT },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
     });
 
-    // Salary breakdown — hour-accurate (per-day -> per-hour -> payable).
+    // ===== Salary calculation (method shown inline in row labels) =====
     autoTable(doc, {
-      head: [['Salary Breakdown', 'Amount']],
+      startY: this.finalY(doc) + 5,
+      head: [['Salary Calculation', 'Amount']],
       body: [
         ['Monthly Salary', this.inr(s.monthlySalary)],
-        ['Total Days In Month', String(s.totalDaysInMonth)],
-        ['Per Day Salary', this.inrDec(s.perDaySalary)],
-        [`Working Hours / Day`, `${this.reqHours(s.requiredMinutesPerDay)} h`],
-        ['Per Hour Salary', this.inrDec(s.perHourSalary)],
+        ['Total Days in Month', String(s.totalDaysInMonth)],
+        ['Per Day  =  Monthly / Days', this.inrDec(s.perDaySalary)],
+        ['Working Hours / Day', `${reqH} h`],
+        ['Per Hour  =  Per Day / Hours', this.inrDec(s.perHourSalary)],
         ['Total Hours Worked', fmtMinutes(s.totalNetMinutes)],
         ['Payable Days (hour-based)', s.payableDays.toFixed(2)],
-        ['NET PAYABLE', this.inr(s.netPayable)],
+        ['Earned  =  Per Day x Payable Days', this.inr(s.earnedSalary)],
       ],
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [45, 211, 111] },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 7) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [224, 247, 233];
-        }
-      },
+      theme: 'striped',
+      styles: { fontSize: 9.5, cellPadding: 2.6, textColor: INK },
+      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: GREEN_SOFT },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
     });
 
-    // Show the exact formula so the slip is self-explanatory.
-    const lastY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
-    doc.setFontSize(8);
-    const formula =
-      `Calculation: Per Day = Monthly / ${s.totalDaysInMonth} = ${this.inrDec(s.perDaySalary)}. ` +
-      `Per Hour = Per Day / ${this.reqHours(s.requiredMinutesPerDay)}h = ${this.inrDec(s.perHourSalary)}. ` +
-      `Earned = Per Day x Payable Days (${s.payableDays.toFixed(2)}) = ${this.inr(s.earnedSalary)}. ` +
-      `Worked days are paid by actual hours (hours worked / ${this.reqHours(s.requiredMinutesPerDay)}h), capped at a full day.`;
-    doc.text(doc.splitTextToSize(formula, 180) as string[], 14, lastY);
+    // ===== NET PAYABLE banner (big, green, like the on-screen card) =====
+    let y = this.finalY(doc) + 7;
+    doc.setFillColor(...GREEN);
+    doc.roundedRect(14, y, pageW - 28, 18, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('NET PAYABLE', 22, y + 11.5);
+    doc.setFontSize(17);
+    doc.text(this.inr(s.netPayable), pageW - 22, y + 11.5, { align: 'right' });
+
+    // ===== Calculation method (so the shared slip explains itself) =====
+    y += 28;
+    doc.setTextColor(...MUTED);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.6);
+    const method =
+      `How this is calculated:\n` +
+      `1. Per Day Salary = Monthly Salary / ${s.totalDaysInMonth} days = ${this.inrDec(s.perDaySalary)}.\n` +
+      `2. Per Hour Salary = Per Day / ${reqH} working hours = ${this.inrDec(s.perHourSalary)}.\n` +
+      `3. Each present day is paid by the actual hours worked (hours / ${reqH}h), capped at one full day. ` +
+      `Overtime is paid only when "Overtime payable" is enabled in Settings.\n` +
+      `4. Net Payable = Per Day x Payable Days (${s.payableDays.toFixed(2)}) = ${this.inr(s.netPayable)}.`;
+    doc.text(doc.splitTextToSize(method, pageW - 28) as string[], 14, y);
+
+    // Thin footer rule + note.
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(0.6);
+    doc.line(14, 286, pageW - 14, 286);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text('Computer-generated salary slip — Attendance System.', 14, 291);
 
     doc.save(`salary-slip-${r.employeeName}-${r.month}.pdf`);
     this.toast('Salary slip PDF downloaded.', 'success');
