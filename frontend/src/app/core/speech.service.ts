@@ -17,13 +17,13 @@ export class SpeechService {
     if (!text) return;
 
     if (Capacitor.isNativePlatform()) {
-      // Native phone TTS. High pitch -> lighter / female-sounding voice.
+      // Native phone TTS. lang en-IN -> Indian English accent (if the device has it).
       TextToSpeech.stop().catch(() => undefined);
       TextToSpeech.speak({
         text,
-        lang: 'en-US',
+        lang: 'en-IN',
         rate: 1.0,
-        pitch: 1.5,
+        pitch: 1.4, // slightly higher -> lighter / female-sounding
         volume: 1.0,
         category: 'ambient',
       }).catch(() => undefined);
@@ -36,30 +36,34 @@ export class SpeechService {
     try {
       synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
+      u.lang = 'en-IN'; // Indian English
       u.rate = 1;
-      u.pitch = 1.5; // higher pitch = lighter / female-sounding
+      u.pitch = 1.4; // higher pitch = lighter / female-sounding
       u.volume = 1;
-      const female = this.pickFemaleVoice(synth);
-      if (female) u.voice = female;
+      const voice = this.pickIndianVoice(synth);
+      if (voice) u.voice = voice;
       synth.speak(u);
     } catch {
       /* speech unavailable - ignore */
     }
   }
 
-  // Try to pick a female English voice in the browser (best-effort).
-  private pickFemaleVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
+  // Prefer an Indian English voice (en-IN), ideally female; fall back to any English voice.
+  private pickIndianVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
     const voices = synth.getVoices();
     if (!voices.length) return null;
+    const byName = (kw: string) => voices.find((v) => v.name.toLowerCase().includes(kw));
+    const indian = voices.filter(
+      (v) => v.lang.toLowerCase() === 'en-in' || v.lang.toLowerCase() === 'hi-in',
+    );
+    const indianFemale = indian.find((v) => /female|heera|kalpana|swara|aditi/i.test(v.name));
     const en = voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
-    const byName = (kw: string) => en.find((v) => v.name.toLowerCase().includes(kw));
     return (
-      byName('female') ||
-      byName('zira') ||
-      byName('samantha') ||
-      byName('google uk english female') ||
-      byName('aria') ||
+      indianFemale ||          // Indian female (e.g. Microsoft Heera)
+      byName('heera') ||       // en-IN female (Windows)
+      byName('google english (india)') ||
+      indian[0] ||             // any Indian voice (incl. Ravi male)
+      en.find((v) => v.name.toLowerCase().includes('female')) ||
       en[0] ||
       null
     );
