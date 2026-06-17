@@ -58,12 +58,13 @@ public class AttendanceController : ControllerBase
         if (employee is null)
             return NotFound(new { message = "Employee not found. Provide employeeId, employeeCode, or a matching faceDescriptor." });
 
-        var now = DateTime.Now;
-        var dayStart = now.Date;
-        var nextDay = dayStart.AddDays(1);
+        var nowUtc = DateTime.UtcNow;               // store the absolute instant
+        var istToday = BusinessClock.Today;         // IST calendar day
+        var startUtc = BusinessClock.ToUtc(istToday);
+        var endUtc = BusinessClock.ToUtc(istToday.AddDays(1));
 
         var lastPunch = await _db.Punches
-            .Where(p => p.EmployeeId == employee.Id && p.Timestamp >= dayStart && p.Timestamp < nextDay)
+            .Where(p => p.EmployeeId == employee.Id && p.Timestamp >= startUtc && p.Timestamp < endUtc)
             .OrderByDescending(p => p.Timestamp)
             .FirstOrDefaultAsync();
 
@@ -73,7 +74,7 @@ public class AttendanceController : ControllerBase
         var punch = new AttendancePunch
         {
             EmployeeId = employee.Id,
-            Timestamp = now,
+            Timestamp = nowUtc,
             Direction = direction,
             DeviceId = req.DeviceId,
             Source = req.Source,
@@ -82,10 +83,10 @@ public class AttendanceController : ControllerBase
         _db.Punches.Add(punch);
         await _db.SaveChangesAsync();
 
-        var day = await _svc.RecomputeDayAsync(employee.Id, dayStart);
+        var day = await _svc.RecomputeDayAsync(employee.Id, istToday);
 
         punch.Employee = employee;
-        var message = $"{employee.Name} punched {direction} at {now:HH:mm}.";
+        var message = $"{employee.Name} punched {direction} at {BusinessClock.ToLocal(nowUtc):HH:mm}.";
         return Ok(new PunchResultDto(punch.ToDto(), day.NetMinutes, message, matchDistance, matchConfidence));
     }
 
@@ -94,7 +95,7 @@ public class AttendanceController : ControllerBase
     public async Task<ActionResult<AttendanceDayDto>> Today(int employeeId)
     {
         if (!await _db.Employees.AnyAsync(e => e.Id == employeeId)) return NotFound();
-        var day = await _svc.RecomputeDayAsync(employeeId, DateTime.Now.Date);
+        var day = await _svc.RecomputeDayAsync(employeeId, BusinessClock.Today);
         await _db.Entry(day).Reference(d => d.Employee).LoadAsync();
         return Ok(day.ToDto());
     }
@@ -287,9 +288,10 @@ public class AttendanceController : ControllerBase
         [FromQuery] string date, [FromQuery] int employeeId)
     {
         if (!TryParseDate(date, out var d)) return BadRequest("date must be yyyy-MM-dd.");
-        var next = d.AddDays(1);
+        var startUtc = BusinessClock.ToUtc(d);
+        var endUtc = BusinessClock.ToUtc(d.AddDays(1));
         var list = await _db.Punches.AsNoTracking().Include(p => p.Employee)
-            .Where(p => p.EmployeeId == employeeId && p.Timestamp >= d && p.Timestamp < next)
+            .Where(p => p.EmployeeId == employeeId && p.Timestamp >= startUtc && p.Timestamp < endUtc)
             .OrderBy(p => p.Timestamp).ToListAsync();
         return Ok(list.Select(p => p.ToDto()));
     }
@@ -304,7 +306,7 @@ public class AttendanceController : ControllerBase
         var punch = new AttendancePunch
         {
             EmployeeId = dto.EmployeeId,
-            Timestamp = BusinessClock.AsLocalInput(dto.Timestamp), // typed time is IST
+            Timestamp = BusinessClock.ToUtc(dto.Timestamp), // admin-typed time is IST -> store UTC
             Direction = dto.Direction,
             Source = PunchSource.Manual,
             Note = dto.Note
@@ -327,16 +329,17 @@ public class AttendanceController : ControllerBase
         var punch = await _db.Punches.Include(p => p.Employee).FirstOrDefaultAsync(p => p.Id == id);
         if (punch is null) return NotFound();
 
-        var oldDate = punch.Timestamp.Date;
-        punch.Timestamp = BusinessClock.AsLocalInput(dto.Timestamp); // typed time is IST
+        var oldIstDate = BusinessClock.ToLocal(punch.Timestamp).Date;
+        punch.Timestamp = BusinessClock.ToUtc(dto.Timestamp); // admin-typed time is IST -> store UTC
         punch.Direction = dto.Direction;
         if (dto.Note != null) punch.Note = dto.Note;
         punch.Source = PunchSource.Manual;
         await _db.SaveChangesAsync();
 
-        await _svc.RecomputeDayAsync(punch.EmployeeId, dto.Timestamp.Date);
-        if (oldDate != dto.Timestamp.Date)
-            await _svc.RecomputeDayAsync(punch.EmployeeId, oldDate);
+        var newIstDate = dto.Timestamp.Date;
+        await _svc.RecomputeDayAsync(punch.EmployeeId, newIstDate);
+        if (oldIstDate != newIstDate)
+            await _svc.RecomputeDayAsync(punch.EmployeeId, oldIstDate);
 
         return Ok(punch.ToDto());
     }
@@ -348,7 +351,7 @@ public class AttendanceController : ControllerBase
         var punch = await _db.Punches.FirstOrDefaultAsync(p => p.Id == id);
         if (punch is null) return NotFound();
         var empId = punch.EmployeeId;
-        var date = punch.Timestamp.Date;
+        var date = BusinessClock.ToLocal(punch.Timestamp).Date; // IST day to recompute
         _db.Punches.Remove(punch);
         await _db.SaveChangesAsync();
         await _svc.RecomputeDayAsync(empId, date);

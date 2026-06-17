@@ -1,11 +1,10 @@
 namespace Attendance.Api;
 
 /// <summary>
-/// The business runs on a single fixed timezone (India / IST). The server, however,
-/// may run in UTC (e.g. Render). Attendance math — especially the fixed lunch window
-/// (13:00-14:00 etc.) — must use the BUSINESS wall-clock, not the server's UTC clock,
-/// otherwise a 13:00 lunch shows up as 18:30. This converts any stored timestamp into
-/// business-local wall-clock so the calculator works in IST everywhere.
+/// The business runs on a single fixed timezone (India / IST), but timestamps are stored
+/// as absolute UTC instants so the result is identical whether the server runs in UTC
+/// (Render) or IST (a dev laptop). Convert to IST only at the edges: when displaying, and
+/// when reading an admin-typed wall-clock time.
 /// </summary>
 public static class BusinessClock
 {
@@ -22,24 +21,28 @@ public static class BusinessClock
         return TimeZoneInfo.Utc;
     }
 
-    /// <summary>
-    /// Return the business-local wall-clock for a stored timestamp.
-    /// - Kind=Utc  (PostgreSQL/Render): convert UTC -> IST.
-    /// - Kind=Unspecified/Local (SQLite local dev, already IST): keep as-is.
-    /// Result Kind is Unspecified so it serialises WITHOUT an offset and the frontend
-    /// shows it directly as the local clock time.
-    /// </summary>
-    public static DateTime ToLocal(DateTime dt) =>
-        dt.Kind == DateTimeKind.Utc
-            ? DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeFromUtc(dt, Tz), DateTimeKind.Unspecified)
-            : DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+    /// <summary>Current IST wall-clock, derived from the absolute UTC instant (machine-TZ independent).</summary>
+    public static DateTime Now => ToLocal(DateTime.UtcNow);
+
+    /// <summary>Today's calendar date in IST.</summary>
+    public static DateTime Today => Now.Date;
 
     /// <summary>
-    /// Treat an admin-typed time (e.g. "13:00" from the manual-punch form, which arrives
-    /// Kind=Unspecified) as IST and store it the SAME way a live DateTime.Now punch is stored.
-    /// Tag it Local so EF/Npgsql converts it to the correct instant (server TZ = IST), matching
-    /// kiosk punches. Without this a manual 13:00 was assumed UTC and showed up as 18:30.
+    /// A stored UTC instant -> IST wall-clock (Kind=Unspecified) for display + calculation.
+    /// The stored value is ALWAYS treated as UTC, regardless of the Kind the DB hands back
+    /// (PostgreSQL legacy + SQLite both return Unspecified).
     /// </summary>
-    public static DateTime AsLocalInput(DateTime wallClock) =>
-        DateTime.SpecifyKind(wallClock, DateTimeKind.Local);
+    public static DateTime ToLocal(DateTime utc) =>
+        DateTime.SpecifyKind(
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Tz),
+            DateTimeKind.Unspecified);
+
+    /// <summary>
+    /// An IST wall-clock time (e.g. admin-typed "13:00", or an IST calendar date) -> the
+    /// absolute UTC instant to store / to compare against stored timestamps.
+    /// </summary>
+    public static DateTime ToUtc(DateTime istWallClock) =>
+        DateTime.SpecifyKind(
+            TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(istWallClock, DateTimeKind.Unspecified), Tz),
+            DateTimeKind.Utc);
 }

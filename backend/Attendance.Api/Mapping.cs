@@ -21,8 +21,9 @@ public static class Mapping
         e.ShiftId, e.MonthlySalary, e.IsActive, e.PhotoUrl, e.HasFace, e.FaceCount, e.CreatedAt);
 
     public static PunchDto ToDto(this AttendancePunch p) => new(
-        p.Id, p.EmployeeId, p.Employee?.Code, p.Employee?.Name, p.Timestamp, p.Direction.ToString(),
-        p.DeviceId, p.Source.ToString(), p.Note);
+        p.Id, p.EmployeeId, p.Employee?.Code, p.Employee?.Name,
+        BusinessClock.ToLocal(p.Timestamp), // stored UTC -> IST for display
+        p.Direction.ToString(), p.DeviceId, p.Source.ToString(), p.Note);
 
     public static AttendanceDayDto ToDto(this AttendanceDay d) => new(
         d.Id, d.EmployeeId, d.Employee?.Name, d.Date.ToString(DateFmt),

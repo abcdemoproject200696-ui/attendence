@@ -20,14 +20,11 @@ WORKDIR /app
 # Npgsql needs the Kerberos/GSSAPI shared lib (libgssapi_krb5.so.2) during the
 # PostgreSQL auth handshake; the slim runtime image doesn't ship it.
 # tzdata: the slim image has no timezone database, so TimeZoneInfo("Asia/Kolkata")
-# would fail and BusinessClock would fall back to UTC (lunch/clock math off by +5:30).
+# would fail and BusinessClock could not convert UTC <-> IST. The server itself stays
+# in UTC; timestamps are stored as UTC instants and converted to IST only at the edges.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgssapi-krb5-2 tzdata \
     && rm -rf /var/lib/apt/lists/*
-
-# Run the whole app in the business timezone (India) so DateTime.Now and all
-# date math are IST, consistent with the kiosk/admin.
-ENV TZ=Asia/Kolkata
 
 COPY --from=build /app/publish ./
 

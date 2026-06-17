@@ -45,9 +45,11 @@ public class AttendanceService
             return dayEntity;
         }
 
-        var nextDay = date.AddDays(1);
+        // `date` is the IST calendar day; stored timestamps are UTC, so query the UTC window.
+        var startUtc = BusinessClock.ToUtc(date);
+        var endUtc = BusinessClock.ToUtc(date.AddDays(1));
         var punches = await _db.Punches
-            .Where(p => p.EmployeeId == employeeId && p.Timestamp >= date && p.Timestamp < nextDay)
+            .Where(p => p.EmployeeId == employeeId && p.Timestamp >= startUtc && p.Timestamp < endUtc)
             .OrderBy(p => p.Timestamp)
             .ToListAsync();
 
@@ -127,9 +129,11 @@ public class AttendanceService
             return existing;
         }
 
-        var nextDay = date.AddDays(1);
+        // `date` is the IST calendar day; stored timestamps are UTC, so query the UTC window.
+        var startUtc = BusinessClock.ToUtc(date);
+        var endUtc = BusinessClock.ToUtc(date.AddDays(1));
         var punches = await _db.Punches.AsNoTracking()
-            .Where(p => p.EmployeeId == employee.Id && p.Timestamp >= date && p.Timestamp < nextDay)
+            .Where(p => p.EmployeeId == employee.Id && p.Timestamp >= startUtc && p.Timestamp < endUtc)
             .OrderBy(p => p.Timestamp)
             .ToListAsync();
 
