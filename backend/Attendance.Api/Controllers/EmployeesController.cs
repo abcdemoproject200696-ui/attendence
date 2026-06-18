@@ -130,10 +130,13 @@ public class EmployeesController : ControllerBase
     }
 
     /// <summary>
-    /// Validate enrolled face descriptors: at most 5, each exactly 128-d.
-    /// Returns an error message (=> 400) or null when valid (also valid: null/empty = no faces).
+    /// Validate enrolled face descriptors: at most 5; each a sane vector length; and
+    /// all the SAME length within a request. We don't hardcode 128 because different
+    /// clients use different embedders (Ionic face-api = 128-d, Flutter MobileFaceNet = 192-d).
+    /// Returns an error message (=> 400) or null when valid (null/empty = no faces).
     /// </summary>
-    private const int FaceDescriptorLength = 128;
+    private const int MinFaceDescriptorLength = 64;
+    private const int MaxFaceDescriptorLength = 1024;
     private const int MaxFaceDescriptors = 5;
 
     private static string? ValidateFaceDescriptors(List<List<double>>? descriptors)
@@ -141,10 +144,15 @@ public class EmployeesController : ControllerBase
         if (descriptors is null || descriptors.Count == 0) return null;
         if (descriptors.Count > MaxFaceDescriptors)
             return $"At most {MaxFaceDescriptors} face descriptors allowed (got {descriptors.Count}).";
+        int? len = null;
         for (var i = 0; i < descriptors.Count; i++)
         {
-            if (descriptors[i] is null || descriptors[i].Count != FaceDescriptorLength)
-                return $"Face descriptor #{i + 1} must have exactly {FaceDescriptorLength} values.";
+            var d = descriptors[i];
+            if (d is null || d.Count < MinFaceDescriptorLength || d.Count > MaxFaceDescriptorLength)
+                return $"Face descriptor #{i + 1} has an invalid size ({d?.Count ?? 0}).";
+            len ??= d.Count;
+            if (d.Count != len)
+                return "All face descriptors must have the same length.";
         }
         return null;
     }
