@@ -61,6 +61,10 @@
               }
             </ion-text>
 
+            @if (cameraOn() && modelsReady()) {
+            <p class="detect-meter">Detection: <strong>{{ detectMs() }} ms</strong> (avg {{ detectAvg() }} ms)</p>
+            }
+
             <ion-item lines="none" class="auto-toggle">
               <ion-toggle [checked]="autoScan()" (ionChange)="toggleAutoScan()">Auto-scan</ion-toggle>
             </ion-item>

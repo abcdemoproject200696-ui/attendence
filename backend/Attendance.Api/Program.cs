@@ -89,6 +89,10 @@ using (var scope = app.Services.CreateScope())
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"OvertimePayable\" boolean NOT NULL DEFAULT FALSE;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"HrCanEditAttendance\" boolean NOT NULL DEFAULT FALSE;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Gender\" text;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"PhotoUrl\" text;");
     }
     else
     {
@@ -109,6 +113,18 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Settings\" ADD COLUMN \"HrCanEditAttendance\" INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"Gender\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"PhotoUrl\" TEXT;");
         }
         catch { /* column already exists */ }
     }

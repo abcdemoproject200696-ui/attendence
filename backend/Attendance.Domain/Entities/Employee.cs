@@ -19,6 +19,7 @@ public class Employee
 
     public bool IsActive { get; set; } = true;
     public string? PhotoUrl { get; set; }
+    public string? Gender { get; set; }
 
     /// <summary>SHA-256 hex of the login password. NEVER exposed in any DTO.</summary>
     public string? PasswordHash { get; set; }

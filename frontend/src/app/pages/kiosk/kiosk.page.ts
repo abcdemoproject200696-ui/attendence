@@ -97,6 +97,18 @@ export class KioskPage implements OnDestroy {
   modelsLoading = signal(false);
   modelsReady = signal(false);
   scanning = signal(false); // a face detection is currently running
+
+  // ===== Detection-time meter (for the Ionic-vs-Flutter speed comparison) =====
+  detectMs = signal(0);
+  detectAvg = signal(0);
+  private detectTimes: number[] = [];
+  private recordDetect(ms: number): void {
+    const v = Math.round(ms);
+    this.detectMs.set(v);
+    this.detectTimes.push(v);
+    if (this.detectTimes.length > 30) this.detectTimes.shift();
+    this.detectAvg.set(Math.round(this.detectTimes.reduce((a, b) => a + b, 0) / this.detectTimes.length));
+  }
   autoScan = signal(true); // continuous auto-detect mode (no button needed)
   cooldown = signal(false); // brief pause after a punch so one person isn't re-punched
 
@@ -277,8 +289,10 @@ export class KioskPage implements OnDestroy {
       if (this.requireLiveness()) {
         await this.blinkTick(video);
       } else {
-        // Instant behavior: punch on first detection.
+        // Instant behavior: punch on first detection. (Timed for the speed comparison.)
+        const t0 = performance.now();
         const descriptor = await this.face.getDescriptor(video);
+        this.recordDetect(performance.now() - t0);
         this.scanning.set(false);
         if (descriptor) {
           await this.punchWithDescriptor(descriptor); // sets a cooldown internally

@@ -37,6 +37,6 @@ public class AuthController : ControllerBase
 
         return Ok(new LoginResultDto(
             employee.Id, employee.Code, employee.Name, employee.RoleId,
-            employee.Role?.Name ?? string.Empty, allowedPages));
+            employee.Role?.Name ?? string.Empty, allowedPages, employee.PhotoUrl));
     }
 }
