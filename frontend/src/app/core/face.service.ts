@@ -12,8 +12,10 @@ export class FaceService {
   private stream: MediaStream | null = null;
 
   // Detection options reused across calls. tinyFaceDetector = fast + small models.
+  // inputSize 224 (down from 320) is markedly faster on phones and still accurate
+  // for a close-up kiosk face. Must be a multiple of 32.
   private readonly detectorOptions = new faceapi.TinyFaceDetectorOptions({
-    inputSize: 320,
+    inputSize: 224,
     scoreThreshold: 0.5,
   });
 
@@ -41,9 +43,25 @@ export class FaceService {
     if (!this.loadPromise) {
       this.loadPromise = this.withTimeout(
         (async () => {
+          // Prefer the GPU (WebGL) backend. On some mobile WebViews face-api can
+          // silently fall back to the CPU backend, which is many times slower.
+          // (face-api re-exports tfjs as `tf`; its bundled types omit these fns.)
+          const tf = faceapi.tf as unknown as {
+            setBackend(name: string): Promise<boolean>;
+            ready(): Promise<void>;
+          };
+          try {
+            await tf.setBackend('webgl');
+            await tf.ready();
+          } catch {
+            /* keep whatever backend is available */
+          }
           await faceapi.nets.tinyFaceDetector.loadFromUri(this.modelUrl);
           await faceapi.nets.faceLandmark68Net.loadFromUri(this.modelUrl);
           await faceapi.nets.faceRecognitionNet.loadFromUri(this.modelUrl);
+          // Warm up: run one throwaway inference so the FIRST real scan doesn't
+          // pay the one-time WebGL shader-compile cost (a ~1-2s UI freeze).
+          await this.warmUp();
         })(),
         30000,
         'Loading face models'
@@ -54,6 +72,22 @@ export class FaceService {
       });
     }
     return this.loadPromise;
+  }
+
+  // One throwaway detection on a blank canvas so the expensive WebGL shader
+  // compilation happens during loading, not on the user's first scan.
+  private async warmUp(): Promise<void> {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 224;
+      c.height = 224;
+      await faceapi
+        .detectSingleFace(c, this.detectorOptions)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+    } catch {
+      /* warm-up is best-effort */
+    }
   }
 
   get modelsReady(): boolean {
@@ -74,7 +108,12 @@ export class FaceService {
     this.stopCamera();
     try {
       this.stream = await this.withTimeout(
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }),
+        // A modest 640x480 front camera is plenty for face detection and lighter to
+        // process/render than a full-res stream on a phone.
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false,
+        }),
         20000,
         'Camera'
       );
