@@ -6,6 +6,7 @@ import {
   AttendanceDay,
   AttendancePunch,
   MonthlyReport,
+  SalaryAll,
   PunchRequest,
   PunchResult,
   PunchInput,
@@ -42,6 +43,12 @@ export class AttendanceService {
   report(month: string, employeeId: number): Observable<MonthlyReport> {
     const params = new HttpParams().set('month', month).set('employeeId', employeeId);
     return this.http.get<MonthlyReport>(`${this.base}/report`, { params });
+  }
+
+  // All active employees' net payable for a month (Salary page "All employees" view).
+  salaryAll(month: string): Observable<SalaryAll> {
+    const params = new HttpParams().set('month', month);
+    return this.http.get<SalaryAll>(`${this.base}/salary-all`, { params });
   }
 
   recompute(date: string, employeeId: number): Observable<AttendanceDay> {

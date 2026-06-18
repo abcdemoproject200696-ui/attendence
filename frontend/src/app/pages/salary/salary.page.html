@@ -53,7 +53,8 @@
       </ion-col>
       <ion-col size="12" size-md="5">
         <ion-item>
-          <ion-select label="Employee" labelPlacement="stacked" [(ngModel)]="employeeId">
+          <ion-select label="Employee" labelPlacement="stacked" [(ngModel)]="employeeId" placeholder="All employees">
+            <ion-select-option [value]="null">All employees</ion-select-option>
             @for (e of employees(); track e.id) {
             <ion-select-option [value]="e.id">{{ e.name }} ({{ e.code }})</ion-select-option>
             }
@@ -112,6 +113,48 @@
 
       <ion-button expand="block" color="success" (click)="exportSlipPdf()">
         <ion-icon slot="start" name="download-outline"></ion-icon> Export Salary Slip PDF
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- ===== All employees payroll list ===== -->
+  @if (salaryAll(); as sa) {
+  <ion-card class="salary-card">
+    <ion-card-header>
+      <ion-card-subtitle>{{ sa.month }} · All Employees</ion-card-subtitle>
+      <ion-card-title>Payroll — {{ sa.rows.length }} employees</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="table-wrap">
+        <ion-grid class="all-table">
+          <ion-row class="thead">
+            <ion-col size="4">Employee</ion-col>
+            <ion-col size="2" class="ion-text-center">Present</ion-col>
+            <ion-col size="3" class="ion-text-center">Payable Days</ion-col>
+            <ion-col size="3" class="ion-text-end">Net Payable</ion-col>
+          </ion-row>
+          @for (row of sa.rows; track row.employeeId) {
+          <ion-row class="trow" (click)="employeeId = row.employeeId; generate()">
+            <ion-col size="4">{{ row.name }} <ion-badge color="medium">{{ row.code }}</ion-badge></ion-col>
+            <ion-col size="2" class="ion-text-center">{{ row.presentDays }}</ion-col>
+            <ion-col size="3" class="ion-text-center">{{ row.payableDays.toFixed(2) }}</ion-col>
+            <ion-col size="3" class="ion-text-end"><strong>{{ inr(row.netPayable) }}</strong></ion-col>
+          </ion-row>
+          }
+          @if (sa.rows.length === 0) {
+          <ion-row><ion-col class="ion-text-center">No active employees.</ion-col></ion-row>
+          }
+        </ion-grid>
+      </div>
+
+      <div class="breakdown">
+        <div class="brow net"><span>TOTAL PAYABLE</span><strong>{{ inr(sa.totalNetPayable) }}</strong></div>
+      </div>
+      <ion-text color="medium"><p class="formula">Tap a row to open that employee's detailed slip.</p></ion-text>
+
+      <ion-button expand="block" color="success" (click)="exportAllPdf()">
+        <ion-icon slot="start" name="download-outline"></ion-icon> Export Payroll PDF
       </ion-button>
     </ion-card-content>
   </ion-card>

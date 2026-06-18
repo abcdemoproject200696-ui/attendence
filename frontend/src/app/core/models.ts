@@ -201,6 +201,28 @@ export interface MonthlyReport {
   summary: MonthlySummary;
 }
 
+// ===== All-employees salary (one month) =====
+export interface EmployeeSalaryRow {
+  employeeId: number;
+  code: string;
+  name: string;
+  monthlySalary: number;
+  presentDays: number;
+  halfDays: number;
+  absentDays: number;
+  paidLeaves: number;
+  unpaidLeaves: number;
+  payableDays: number;
+  totalNetMinutes: number;
+  netPayable: number;
+}
+
+export interface SalaryAll {
+  month: string; // "2026-06"
+  rows: EmployeeSalaryRow[];
+  totalNetPayable: number;
+}
+
 // ===== Request DTOs (attendance) =====
 export interface PunchRequest {
   employeeId?: number;

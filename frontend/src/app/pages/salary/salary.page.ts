@@ -38,7 +38,7 @@ import { autoTable } from 'jspdf-autotable';
 import { environment } from '../../../environments/environment';
 import { AttendanceService } from '../../core/attendance.service';
 import { EmployeeService } from '../../core/employee.service';
-import { Employee, MonthlyReport } from '../../core/models';
+import { Employee, MonthlyReport, SalaryAll } from '../../core/models';
 import { fmtMinutes, currentMonth } from '../../core/util';
 
 // Admin-only Salary page. Gated behind a simple client-side PIN (environment.adminPin).
@@ -92,9 +92,11 @@ export class SalaryPage implements OnInit {
 
   // ===== Salary view state =====
   month = currentMonth();
+  // null => "All employees" (list view). A number => one employee (detailed card).
   employeeId: number | null = null;
   employees = signal<Employee[]>([]);
   report = signal<MonthlyReport | null>(null);
+  salaryAll = signal<SalaryAll | null>(null);
   loading = signal(false);
   error = signal<string | null>(null);
 
@@ -106,11 +108,9 @@ export class SalaryPage implements OnInit {
   }
 
   ngOnInit(): void {
+    // Default stays "All employees" (employeeId = null) so the list view shows first.
     this.employeeSvc.getAll().subscribe({
-      next: (e) => {
-        this.employees.set(e);
-        if (e.length && this.employeeId == null) this.employeeId = e[0].id;
-      },
+      next: (e) => this.employees.set(e),
       error: () => this.error.set('Could not load employees. Is the backend running?'),
     });
   }
@@ -183,23 +183,40 @@ export class SalaryPage implements OnInit {
   }
 
   generate(): void {
-    if (this.employeeId == null || !this.month) {
-      this.error.set('Please select both month and employee.');
+    if (!this.month) {
+      this.error.set('Please select a month.');
       return;
     }
     this.loading.set(true);
     this.error.set(null);
     this.report.set(null);
-    this.attendance.report(this.month, this.employeeId).subscribe({
-      next: (r) => {
-        this.report.set(r);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Could not load salary report. Is the backend running?');
-        this.loading.set(false);
-      },
-    });
+    this.salaryAll.set(null);
+
+    if (this.employeeId == null) {
+      // All employees -> list of net payable for the month.
+      this.attendance.salaryAll(this.month).subscribe({
+        next: (r) => {
+          this.salaryAll.set(r);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Could not load salary list. Is the backend running?');
+          this.loading.set(false);
+        },
+      });
+    } else {
+      // Single employee -> detailed card + slip.
+      this.attendance.report(this.month, this.employeeId).subscribe({
+        next: (r) => {
+          this.report.set(r);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Could not load salary report. Is the backend running?');
+          this.loading.set(false);
+        },
+      });
+    }
   }
 
   // Last drawn autoTable's bottom Y (typed accessor for jsPDF + autotable plugin).
@@ -347,6 +364,44 @@ export class SalaryPage implements OnInit {
 
     doc.save(`${r.employeeName} Salary Slip ${this.monthLong(r.month)}.pdf`);
     this.toast('Salary slip PDF downloaded.', 'success');
+  }
+
+  // All-employees payroll PDF (one row per employee + grand total).
+  exportAllPdf(): void {
+    const sa = this.salaryAll();
+    if (!sa) return;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const GREEN: [number, number, number] = [45, 211, 111];
+
+    doc.setFillColor(...GREEN);
+    doc.rect(0, 0, pageW, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('PAYROLL', 14, 14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text(`Month: ${this.monthLong(sa.month)}  -  ${sa.rows.length} employees`, 14, 23);
+
+    autoTable(doc, {
+      startY: 38,
+      head: [['#', 'Code', 'Employee', 'Present', 'Payable Days', 'Net Payable']],
+      body: sa.rows.map((r, i) => [
+        String(i + 1), r.code, r.name, String(r.presentDays),
+        r.payableDays.toFixed(2), this.inrPdf(r.netPayable),
+      ]),
+      foot: [['', '', '', '', 'TOTAL', this.inrPdf(sa.totalNetPayable)]],
+      theme: 'striped',
+      styles: { fontSize: 9.5, cellPadding: 3, valign: 'middle', textColor: [33, 37, 41] },
+      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold' },
+      footStyles: { fillColor: [224, 247, 233], textColor: [33, 37, 41], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [232, 248, 239] },
+      columnStyles: { 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'right' } },
+    });
+
+    doc.save(`Payroll ${this.monthLong(sa.month)}.pdf`);
+    this.toast('Payroll PDF downloaded.', 'success');
   }
 
   private async toast(message: string, color: string): Promise<void> {

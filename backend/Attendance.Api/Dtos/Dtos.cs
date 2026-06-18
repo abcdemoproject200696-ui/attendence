@@ -187,3 +187,12 @@ public record MonthlySummaryDto(
 public record MonthlyReportDto(
     int EmployeeId, string? EmployeeName, string Month,
     List<AttendanceDayDto> Days, MonthlySummaryDto Summary);
+
+// ---------- All-employees salary (one month, every active employee) ----------
+public record EmployeeSalaryRowDto(
+    int EmployeeId, string Code, string Name, decimal MonthlySalary,
+    int PresentDays, int HalfDays, int AbsentDays,
+    int PaidLeaves, int UnpaidLeaves, double PayableDays,
+    int TotalNetMinutes, decimal NetPayable);
+
+public record SalaryAllDto(string Month, List<EmployeeSalaryRowDto> Rows, decimal TotalNetPayable);

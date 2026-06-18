@@ -173,6 +173,48 @@ public class AttendanceController : ControllerBase
         var shift = employee.Shift ?? await _db.Shifts.FindAsync(employee.ShiftId);
         if (shift is null) return BadRequest("Employee has no shift.");
 
+        var overtimePayable = (await _db.Settings.AsNoTracking().FirstOrDefaultAsync())?.OvertimePayable ?? false;
+        var (dayDtos, summary) = await ComputeMonthAsync(employee, shift, first, overtimePayable);
+        var report = new MonthlyReportDto(
+            employee.Id, employee.Name, first.ToString("yyyy-MM"), dayDtos, summary);
+        return Ok(report);
+    }
+
+    // -------------------- ALL-EMPLOYEES SALARY (one month) --------------------
+    // Salary page "All employees" view: har active employee ki us month ki net payable.
+    [HttpGet("salary-all")]
+    public async Task<ActionResult<SalaryAllDto>> SalaryAll([FromQuery] string month)
+    {
+        if (!TryParseMonth(month, out var first)) return BadRequest("month must be yyyy-MM.");
+
+        var employees = await _db.Employees.Include(e => e.Shift)
+            .Where(e => e.IsActive).OrderBy(e => e.Code).ToListAsync();
+        var overtimePayable = (await _db.Settings.AsNoTracking().FirstOrDefaultAsync())?.OvertimePayable ?? false;
+
+        var rows = new List<EmployeeSalaryRowDto>();
+        foreach (var e in employees)
+        {
+            var shift = e.Shift ?? await _db.Shifts.FindAsync(e.ShiftId);
+            if (shift is null) continue;
+            var (_, s) = await ComputeMonthAsync(e, shift, first, overtimePayable);
+            rows.Add(new EmployeeSalaryRowDto(
+                e.Id, e.Code, e.Name, s.MonthlySalary,
+                s.PresentDays, s.HalfDays, s.AbsentDays,
+                s.PaidLeaves, s.UnpaidLeaves, s.PayableDays,
+                s.TotalNetMinutes, s.NetPayable));
+        }
+
+        var total = rows.Sum(r => r.NetPayable);
+        return Ok(new SalaryAllDto(first.ToString("yyyy-MM"), rows, total));
+    }
+
+    /// <summary>
+    /// Compute a single employee's month: per-day grid + the salary summary. Shared by the
+    /// per-employee Report and the all-employees salary list so the math stays identical.
+    /// </summary>
+    private async Task<(List<AttendanceDayDto> Days, MonthlySummaryDto Summary)> ComputeMonthAsync(
+        Employee employee, Shift shift, DateTime first, bool overtimePayable)
+    {
         var daysInMonth = DateTime.DaysInMonth(first.Year, first.Month);
 
         // Preload holidays & approved leaves for the month for paid/unpaid classification.
@@ -180,7 +222,7 @@ public class AttendanceController : ControllerBase
         var holidays = await _db.Holidays.AsNoTracking()
             .Where(h => h.Date >= first && h.Date <= monthEnd).ToListAsync();
         var leaves = await _db.Leaves.AsNoTracking()
-            .Where(l => l.EmployeeId == employeeId && l.Status == LeaveStatus.Approved &&
+            .Where(l => l.EmployeeId == employee.Id && l.Status == LeaveStatus.Approved &&
                         l.FromDate <= monthEnd && l.ToDate >= first).ToListAsync();
 
         var dayDtos = new List<AttendanceDayDto>();
@@ -214,7 +256,6 @@ public class AttendanceController : ControllerBase
         // OVERTIME: if AppSetting.OvertimePayable is ON, a >8h day pays >1.0 (e.g. 10h = 10/8);
         // if OFF (default), each day is capped at a full day (overtime not paid extra).
         var requiredMinutes = shift.RequiredMinutes > 0 ? shift.RequiredMinutes : 480;
-        var overtimePayable = (await _db.Settings.AsNoTracking().FirstOrDefaultAsync())?.OvertimePayable ?? false;
         double payableWorkDays = 0;
 
         double DayFraction(int netMinutes)
@@ -277,9 +318,7 @@ public class AttendanceController : ControllerBase
             monthlySalary, daysInMonth, perDaySalary, earnedSalary, lossOfPay, netPayable,
             requiredMinutes, perHourSalary, payableWorkDays);
 
-        var report = new MonthlyReportDto(
-            employee.Id, employee.Name, first.ToString("yyyy-MM"), dayDtos, summary);
-        return Ok(report);
+        return (dayDtos, summary);
     }
 
     // -------------------- MANUAL: list punches --------------------

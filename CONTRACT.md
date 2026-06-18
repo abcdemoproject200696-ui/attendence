@@ -195,6 +195,8 @@ liya jaye (koi bhi ek match kare to bas). Punch request abhi bhi single `faceDes
 - `GET  /attendance/range?employeeId={id}&from=YYYY-MM-DD&to=YYYY-MM-DD` → AttendanceDay[]
       (ek employee ki from..to tak har din ki row — Daily page ka date-range filter. max 366 din.)
 - `GET  /attendance/report?month=YYYY-MM&employeeId={id}` → MonthlyReport
+- `GET  /attendance/salary-all?month=YYYY-MM` → `{ month, rows: EmployeeSalaryRow[], totalNetPayable }`
+      (har active employee ki us month ki net payable; Salary page "All employees" list, present/past dono.)
 - `POST /attendance/recompute?date=YYYY-MM-DD&employeeId={id}` → AttendanceDay (dobara calc)
 
 ### Attendance — MANUAL correction (admin)
