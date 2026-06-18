@@ -31,6 +31,8 @@ import { addIcons } from 'ionicons';
 import { buildOutline, addOutline, trashOutline, createOutline, refreshOutline, saveOutline, eyeOutline } from 'ionicons/icons';
 import { AttendanceService } from '../../core/attendance.service';
 import { EmployeeService } from '../../core/employee.service';
+import { AuthService } from '../../core/auth.service';
+import { SettingsService } from '../../core/settings.service';
 import { AttendanceDay, AttendancePunch, DayStatus, Direction, Employee } from '../../core/models';
 import { fmtMinutes, fmtTime, todayIso } from '../../core/util';
 
@@ -68,9 +70,21 @@ import { fmtMinutes, fmtTime, todayIso } from '../../core/util';
 export class DailyPage implements OnInit {
   private attendance = inject(AttendanceService);
   private employeeSvc = inject(EmployeeService);
+  private auth = inject(AuthService);
+  private settingsSvc = inject(SettingsService);
   private toastCtrl = inject(ToastController);
   private alertCtrl = inject(AlertController);
   private router = inject(Router);
+
+  // ===== Manual-edit permission =====
+  // Admin (roleId 1) can always edit. HR (roleId 2) can edit only when the admin has
+  // enabled the hrCanEditAttendance setting. Everyone else: view only.
+  private hrCanEditAttendance = signal(false);
+  canEditAttendance = computed(() => {
+    if (this.auth.isAdmin()) return true;
+    const user = this.auth.currentUser();
+    return user?.roleId === 2 && this.hrCanEditAttendance();
+  });
 
   // ===== Filters =====
   // employeeId = null => "All employees" (single-date view). Set => that employee's
@@ -120,6 +134,11 @@ export class DailyPage implements OnInit {
     this.employeeSvc.getAll().subscribe({
       next: (e) => this.employees.set(e),
       error: () => {},
+    });
+    // Load the HR-edit permission. Backend down -> default false (HR/others get view-only).
+    this.settingsSvc.get().subscribe({
+      next: (s) => this.hrCanEditAttendance.set(s.hrCanEditAttendance),
+      error: () => this.hrCanEditAttendance.set(false),
     });
     this.load();
   }
@@ -197,6 +216,8 @@ export class DailyPage implements OnInit {
 
   // ===== Manual correction =====
   openCorrect(row: AttendanceDay): void {
+    // Gate: only Admin (always) or HR-with-permission may open the correction modal.
+    if (!this.canEditAttendance()) return;
     this.correctEmployeeId = row.employeeId;
     this.correctEmployeeName = row.employeeName;
     this.correctDate = row.date;

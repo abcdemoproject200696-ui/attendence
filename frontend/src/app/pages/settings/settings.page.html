@@ -80,12 +80,12 @@
       <!-- Require liveness (blink) -->
       <div class="field">
         <ion-item lines="none" class="toggle-item">
-          <ion-toggle
+          <ion-checkbox
             [checked]="requireLiveness()"
             (ionChange)="onLivenessChange($event.detail.checked)"
           >
             Require liveness (blink)
-          </ion-toggle>
+          </ion-checkbox>
         </ion-item>
         <ion-note class="helper">
           When ON, the kiosk requires a blink before punching (anti photo-spoof). Experimental.
@@ -95,12 +95,12 @@
       <!-- Attendance voice -->
       <div class="field">
         <ion-item lines="none" class="toggle-item">
-          <ion-toggle
+          <ion-checkbox
             [checked]="voiceEnabled()"
             (ionChange)="onVoiceChange($event.detail.checked)"
           >
             Attendance voice
-          </ion-toggle>
+          </ion-checkbox>
         </ion-item>
         <ion-note class="helper">
           When ON, the kiosk speaks a greeting aloud on punch (Welcome / Thank you). Turn OFF for silent.
@@ -129,12 +129,12 @@
       <!-- Overtime payable -->
       <div class="field">
         <ion-item lines="none" class="toggle-item">
-          <ion-toggle
+          <ion-checkbox
             [checked]="overtimePayable()"
             (ionChange)="onOvertimeChange($event.detail.checked)"
           >
             Overtime payable
-          </ion-toggle>
+          </ion-checkbox>
         </ion-item>
         <ion-note class="helper">
           @if (overtimePayable()) {
@@ -143,6 +143,40 @@
           <strong>OFF:</strong> each day is capped at a full day. Under-time is pro-rated (6h = 6/8),
           overtime is NOT paid extra. Turn ON to pay overtime.
           }
+        </ion-note>
+      </div>
+
+      <ion-button expand="block" color="success" (click)="save()" [disabled]="saving()">
+        @if (saving()) {
+        <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+        <ion-icon slot="start" name="save-outline"></ion-icon> Save Settings
+        }
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- ===== Permissions ===== -->
+  <ion-card class="settings-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="settings-outline"></ion-icon> Permissions
+      </ion-card-title>
+      <ion-card-subtitle>Who may manually edit attendance</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <!-- HR can modify attendance -->
+      <div class="field">
+        <ion-item lines="none" class="toggle-item">
+          <ion-checkbox
+            [checked]="hrCanEditAttendance()"
+            (ionChange)="onHrCanEditChange($event.detail.checked)"
+          >
+            HR can modify attendance
+          </ion-checkbox>
+        </ion-item>
+        <ion-note class="helper">
+          When checked, HR can manually add/edit/delete punches &amp; override days. Admin can always edit.
         </ion-note>
       </div>
 
@@ -176,13 +210,13 @@
       <ion-list>
         @for (role of roles(); track role.id) {
         <ion-item lines="full">
-          <ion-toggle
+          <ion-checkbox
             [checked]="role.isActive"
             [disabled]="isRoleSaving(role.id)"
             (ionChange)="onRoleToggle(role, $event.detail.checked)"
           >
             {{ role.name }}
-          </ion-toggle>
+          </ion-checkbox>
         </ion-item>
         }
       </ion-list>

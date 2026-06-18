@@ -21,7 +21,7 @@ import {
   IonCardTitle,
   IonCardContent,
   IonRange,
-  IonToggle,
+  IonCheckbox,
   IonLabel,
   IonList,
   ToastController,
@@ -63,7 +63,7 @@ import { AppSetting, Role } from '../../core/models';
     IonCardTitle,
     IonCardContent,
     IonRange,
-    IonToggle,
+    IonCheckbox,
     IonLabel,
     IonList,
   ],
@@ -83,7 +83,8 @@ export class SettingsPage implements OnInit {
   threshold = signal(0.5); // editable copy bound to the range slider
   requireLiveness = signal(false); // editable copy bound to the toggle
   voiceEnabled = signal(true); // editable copy bound to the voice toggle
-  overtimePayable = signal(false); // editable copy bound to the overtime toggle
+  overtimePayable = signal(false); // editable copy bound to the overtime checkbox
+  hrCanEditAttendance = signal(false); // editable copy bound to the HR-permission checkbox
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -133,6 +134,7 @@ export class SettingsPage implements OnInit {
         this.requireLiveness.set(s.requireLiveness);
         this.voiceEnabled.set(s.voiceEnabled);
         this.overtimePayable.set(s.overtimePayable);
+        this.hrCanEditAttendance.set(s.hrCanEditAttendance);
         this.loading.set(false);
       },
       error: () => {
@@ -160,6 +162,10 @@ export class SettingsPage implements OnInit {
     this.overtimePayable.set(checked);
   }
 
+  onHrCanEditChange(checked: boolean): void {
+    this.hrCanEditAttendance.set(checked);
+  }
+
   thresholdLabel(): string {
     return this.threshold().toFixed(2);
   }
@@ -179,6 +185,7 @@ export class SettingsPage implements OnInit {
         requireLiveness: this.requireLiveness(),
         voiceEnabled: this.voiceEnabled(),
         overtimePayable: this.overtimePayable(),
+        hrCanEditAttendance: this.hrCanEditAttendance(),
       })
       .subscribe({
         next: (s) => {
@@ -187,6 +194,7 @@ export class SettingsPage implements OnInit {
           this.requireLiveness.set(s.requireLiveness);
           this.voiceEnabled.set(s.voiceEnabled);
           this.overtimePayable.set(s.overtimePayable);
+          this.hrCanEditAttendance.set(s.hrCanEditAttendance);
           this.saving.set(false);
           this.toast('Settings saved.', 'success');
         },

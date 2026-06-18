@@ -20,4 +20,10 @@ public class AppSetting
     /// day (8h) — under-time is pro-rated down, over-time is NOT paid extra.
     /// </summary>
     public bool OvertimePayable { get; set; }
+
+    /// <summary>
+    /// When true, HR (roleId 2) may manually add/edit/delete punches and override days.
+    /// Admin (roleId 1) can always edit regardless of this flag.
+    /// </summary>
+    public bool HrCanEditAttendance { get; set; }
 }

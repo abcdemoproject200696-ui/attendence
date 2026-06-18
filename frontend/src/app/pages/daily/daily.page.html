@@ -83,7 +83,7 @@
         <ion-col size="1">View</ion-col>
       </ion-row>
       @for (r of rows(); track r.id || r.date) {
-      <ion-row class="trow" (click)="openCorrect(r)">
+      <ion-row class="trow" [class.editable]="canEditAttendance()" (click)="openCorrect(r)">
         <ion-col size="2.5">
           {{ rangeMode() ? shortDate(r.date) : r.employeeName }}
           @if (r.isManual) { <ion-badge color="warning">manual</ion-badge> }
@@ -107,7 +107,11 @@
       }
     </ion-grid>
   </div>
+  @if (canEditAttendance()) {
   <ion-text color="medium"><p class="hint">Tap a row to make a manual correction.</p></ion-text>
+  } @else {
+  <ion-text color="medium"><p class="hint">View only — no edit permission.</p></ion-text>
+  }
   }
 
   <!-- ===== Manual correction modal ===== -->

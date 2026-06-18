@@ -35,7 +35,8 @@ public static class Mapping
         h.Id, h.Date.ToString(DateFmt), h.Name, h.IsPaid);
 
     public static AppSettingDto ToDto(this AppSetting s) => new(
-        s.Id, s.FaceMatchThreshold, s.RequireLiveness, s.VoiceEnabled, s.OvertimePayable);
+        s.Id, s.FaceMatchThreshold, s.RequireLiveness, s.VoiceEnabled, s.OvertimePayable,
+        s.HrCanEditAttendance);
 
     public static LeaveDto ToDto(this LeaveRequest l) => new(
         l.Id, l.EmployeeId, l.Employee?.Name, l.FromDate.ToString(DateFmt),

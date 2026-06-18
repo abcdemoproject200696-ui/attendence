@@ -248,6 +248,7 @@ export interface AppSetting {
   requireLiveness: boolean; // kiosk requires a blink before punching (anti photo-spoof)
   voiceEnabled: boolean; // kiosk speaks a greeting aloud on punch
   overtimePayable: boolean; // pay for overtime hours in salary (off = each day capped at full day)
+  hrCanEditAttendance: boolean; // admin grants HR (roleId 2) permission to manually edit attendance
 }
 
 export interface PunchInput {
