@@ -26,10 +26,21 @@ import {
   IonIcon,
   IonButton,
   IonSpinner,
+  IonDatetime,
+  IonModal,
+  IonButtons,
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { cameraOutline, checkmarkCircle, refreshOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
+import {
+  cameraOutline,
+  checkmarkCircle,
+  refreshOutline,
+  eyeOutline,
+  eyeOffOutline,
+  calendarOutline,
+  closeOutline,
+} from 'ionicons/icons';
 import { ShiftService } from '../../core/shift.service';
 import { RoleService } from '../../core/role.service';
 import { FaceService } from '../../core/face.service';
@@ -77,6 +88,20 @@ import { Employee, EmployeeInput, Shift, Role } from '../../core/models';
         font-size: 0.78rem;
         margin: 2px 0 6px 6px;
       }
+      .captured-photo-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        margin: 6px 0 10px;
+      }
+      .captured-photo {
+        width: 96px;
+        height: 96px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid var(--ion-color-success, #2dd36f);
+      }
     `,
   ],
   imports: [
@@ -94,6 +119,9 @@ import { Employee, EmployeeInput, Shift, Role } from '../../core/models';
     IonIcon,
     IonButton,
     IonSpinner,
+    IonDatetime,
+    IonModal,
+    IonButtons,
   ],
 })
 export class EmployeeFormComponent implements OnInit, OnDestroy {
@@ -150,8 +178,25 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   private readonly emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   private readonly phoneRe = /^[6-9]\d{9}$/; // Indian 10-digit mobile (starts 6-9)
 
+  // Optional ID-card fields (match the Flutter app's dropdowns).
+  readonly genders = ['Male', 'Female', 'Other'];
+  readonly bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+
+  // Date-of-birth picker modal state.
+  dobPickerOpen = signal(false);
+  // A still photo captured this session (data-URI). null => keep the existing photo on edit.
+  capturedPhoto = signal<string | null>(null);
+
   constructor() {
-    addIcons({ cameraOutline, checkmarkCircle, refreshOutline, eyeOutline, eyeOffOutline });
+    addIcons({
+      cameraOutline,
+      checkmarkCircle,
+      refreshOutline,
+      eyeOutline,
+      eyeOffOutline,
+      calendarOutline,
+      closeOutline,
+    });
   }
 
   ngOnInit(): void {
@@ -205,6 +250,9 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
       monthlySalary: 0,
       isActive: true,
       password: '',
+      gender: null,
+      bloodGroup: null,
+      dob: null,
     };
   }
 
@@ -247,6 +295,9 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
         monthlySalary: emp.monthlySalary,
         isActive: emp.isActive,
         password: '',
+        gender: emp.gender ?? null,
+        bloodGroup: emp.bloodGroup ?? null,
+        dob: emp.dob ?? null,
       };
       this.selectedRoleId.set(emp.roleId);
       this.resetFaceEnroll();
@@ -272,6 +323,7 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
     this.cameraOn.set(false);
     this.enrollBusy.set(false);
     this.capturedFaces.set([]);
+    this.capturedPhoto.set(null);
     this.existingFaceCount.set(0);
     delete this.form.faceDescriptors;
   }
@@ -279,7 +331,32 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   // Discard all captured photos so the user can recapture from scratch.
   clearCaptures(): void {
     this.capturedFaces.set([]);
+    this.capturedPhoto.set(null);
     delete this.form.faceDescriptors;
+  }
+
+  // ===== Date of Birth picker =====
+  // Pre-fill the wheel at the stored DOB, else a sensible default (year 2000).
+  get dobForPicker(): string {
+    return this.form.dob ? `${this.form.dob}T00:00:00` : '2000-01-01T00:00:00';
+  }
+
+  // "yyyy-MM-dd" -> "dd MMM yyyy" for display (empty when unset).
+  get dobDisplay(): string {
+    if (!this.form.dob) return '';
+    const d = new Date(`${this.form.dob}T00:00:00`);
+    if (isNaN(d.getTime())) return this.form.dob;
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  onDobSelected(value: string | string[] | null | undefined): void {
+    const v = Array.isArray(value) ? value[0] : value;
+    if (v) this.form.dob = v.slice(0, 10); // keep only "yyyy-MM-dd"
+    this.dobPickerOpen.set(false);
+  }
+
+  clearDob(): void {
+    this.form.dob = null;
   }
 
   // ===== Face enrollment =====
@@ -316,6 +393,10 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
       }
       const next = [...this.capturedFaces(), descriptor];
       this.capturedFaces.set(next);
+      // Also grab a still profile photo from the SAME frame so the ID card has a
+      // picture. We keep the latest captured frame as the photo.
+      const still = this.face.captureStill(video);
+      if (still) this.capturedPhoto.set(still);
       if (next.length >= this.maxFaces) {
         this.toast(`Maximum ${this.maxFaces} captured.`, 'success');
       } else {
@@ -385,6 +466,14 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
     }
 
     const payload: EmployeeInput = { ...this.form };
+    // Attach a freshly captured still photo (data-URI) so the ID card has a picture.
+    // On edit with no new capture we OMIT photoUrl so the backend keeps the old one.
+    const photo = this.capturedPhoto();
+    if (photo) {
+      payload.photoUrl = photo;
+    } else {
+      delete payload.photoUrl;
+    }
     // NEW employees: send empty code so the backend auto-generates "EMP00X".
     if (this.editingId == null) {
       delete payload.code;

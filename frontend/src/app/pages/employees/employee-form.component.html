@@ -72,6 +72,36 @@
   <ion-text color="danger"><p class="field-err">Shift is required.</p></ion-text>
   }
   <ion-item>
+    <ion-select label="Gender" labelPlacement="stacked" [(ngModel)]="form.gender" placeholder="Select gender">
+      @for (g of genders; track g) {
+      <ion-select-option [value]="g">{{ g }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  <ion-item>
+    <ion-select label="Blood Group" labelPlacement="stacked" [(ngModel)]="form.bloodGroup" placeholder="Select blood group">
+      @for (b of bloodGroups; track b) {
+      <ion-select-option [value]="b">{{ b }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  <ion-item button="true" (click)="dobPickerOpen.set(true)">
+    <ion-input
+      label="Date of Birth"
+      labelPlacement="stacked"
+      [value]="dobDisplay"
+      placeholder="Tap to select"
+      readonly
+    ></ion-input>
+    @if (form.dob) {
+    <ion-button slot="end" fill="clear" (click)="clearDob(); $event.stopPropagation()" aria-label="Clear date of birth">
+      <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+    </ion-button>
+    } @else {
+    <ion-icon slot="end" name="calendar-outline" color="medium"></ion-icon>
+    }
+  </ion-item>
+  <ion-item>
     <ion-input
       label="Monthly Salary (₹) *"
       labelPlacement="stacked"
@@ -141,6 +171,13 @@
     <video #enrollVideo class="enroll-cam" autoplay playsinline muted></video>
   </div>
 
+  @if (capturedPhoto()) {
+  <div class="captured-photo-wrap">
+    <img [src]="capturedPhoto()" alt="Captured profile photo" class="captured-photo" />
+    <ion-text color="medium"><small>This photo will appear on the ID card.</small></ion-text>
+  </div>
+  }
+
   @if (capturedFaces().length > 0) {
   <ion-text [color]="capturedFaces().length >= minFaces ? 'success' : 'medium'">
     <p class="enroll-progress">
@@ -182,3 +219,19 @@
   }
   }
 </div>
+
+<!-- Date of Birth picker -->
+<ion-modal [isOpen]="dobPickerOpen()" (didDismiss)="dobPickerOpen.set(false)">
+  <ng-template>
+    <ion-datetime
+      presentation="date"
+      [value]="dobForPicker"
+      [preferWheel]="true"
+      (ionChange)="onDobSelected($any($event).detail.value)"
+    >
+      <ion-buttons slot="buttons">
+        <ion-button color="medium" (click)="dobPickerOpen.set(false)">Cancel</ion-button>
+      </ion-buttons>
+    </ion-datetime>
+  </ng-template>
+</ion-modal>

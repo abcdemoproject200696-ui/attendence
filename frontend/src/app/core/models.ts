@@ -72,6 +72,9 @@ export interface Employee {
   monthlySalary: number;
   isActive: boolean;
   photoUrl?: string | null;
+  gender?: string | null;
+  bloodGroup?: string | null;
+  dob?: string | null; // "yyyy-MM-dd"
   hasFace: boolean;
   faceCount: number;
   createdAt: string;
@@ -89,6 +92,13 @@ export interface EmployeeInput {
   monthlySalary: number;
   isActive?: boolean;
   faceDescriptors?: number[][];
+  // Optional profile/ID-card fields (backend supports these on Employee).
+  gender?: string | null;
+  bloodGroup?: string | null;
+  dob?: string | null; // "yyyy-MM-dd"
+  // Still profile photo as a data-URI ("data:image/jpeg;base64,..."). Only sent
+  // when a new photo is captured this session (otherwise the backend keeps the old one).
+  photoUrl?: string | null;
   // Login password. For NEW employees sets it; for EDIT leave blank to keep the old one.
   password?: string;
 }

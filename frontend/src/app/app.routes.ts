@@ -35,6 +35,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/employees/employees.page').then((m) => m.EmployeesPage),
   },
   {
+    // ID Card generator. Reuses the "employees" RBAC key — same admins/HR who
+    // manage staff can issue cards (no backend page-seed needed).
+    path: 'idcard',
+    canActivate: [authGuard],
+    data: { pageKey: 'employees' },
+    loadComponent: () => import('./pages/id-card/id-card.page').then((m) => m.IdCardPage),
+  },
+  {
     path: 'daily',
     canActivate: [authGuard],
     data: { pageKey: 'daily' },

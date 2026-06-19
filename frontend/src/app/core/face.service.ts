@@ -169,6 +169,24 @@ export class FaceService {
     return Array.from(detection.descriptor);
   }
 
+  // Grab the CURRENT video frame as a JPEG data-URI ("data:image/jpeg;base64,...").
+  // Used to save a still profile photo alongside the enrolled face descriptors so
+  // the employee's photo can be shown on the ID card. Downscaled to keep the
+  // payload small. Returns null if the frame isn't ready yet.
+  captureStill(video: HTMLVideoElement, maxWidth = 480, quality = 0.8): string | null {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return null;
+    const scale = Math.min(1, maxWidth / vw);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+
   // Like getDescriptor(), but also returns the Eye Aspect Ratio (EAR) computed
   // from the 68 facial landmarks — used for the experimental blink/liveness check.
   // Returns null if no face is found.

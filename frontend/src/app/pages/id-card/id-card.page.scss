@@ -1,0 +1,165 @@
+// Brand greens — mirror the PDF (#16A34A / soft green).
+$brand-green: #16a34a;
+$brand-green-soft: #e8f8ef;
+
+.center-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.avatar-fallback {
+  font-size: 40px;
+  color: $brand-green;
+}
+
+.validity-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .validity-item {
+    flex: 1;
+    --background: var(--ion-color-light, #f4f5f8);
+    border-radius: 10px;
+  }
+}
+
+.id-card {
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: $brand-green;
+    padding: 12px 14px;
+  }
+
+  &__logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #fff;
+    color: $brand-green;
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__brand {
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  &__brand-sub {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+  }
+
+  &__body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__photo {
+    width: 96px;
+    height: 96px;
+    border-radius: 10px;
+    border: 2px solid $brand-green;
+    background: $brand-green-soft;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    ion-icon {
+      font-size: 56px;
+      color: $brand-green;
+    }
+  }
+
+  &__name {
+    margin-top: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  &__fields {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  &__field {
+    display: flex;
+    padding: 3px 0;
+    font-size: 13.5px;
+
+    span {
+      width: 96px;
+      flex: 0 0 96px;
+      color: var(--ion-color-medium, #6b7280);
+      font-size: 12.5px;
+    }
+
+    b {
+      flex: 1;
+      font-weight: 600;
+    }
+  }
+
+  &__validity {
+    width: 100%;
+    margin-top: 12px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: $brand-green-soft;
+    color: $brand-green;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  &__footer {
+    background: $brand-green;
+    color: #fff;
+    font-size: 10px;
+    text-align: center;
+    padding: 7px;
+  }
+}
+
+.no-photo-note {
+  display: block;
+  text-align: center;
+  margin: 12px auto 0;
+  max-width: 320px;
+  font-size: 0.8rem;
+}
+
+.download-btn {
+  max-width: 320px;
+  margin: 16px auto 24px;
+  --background: #{$brand-green};
+}

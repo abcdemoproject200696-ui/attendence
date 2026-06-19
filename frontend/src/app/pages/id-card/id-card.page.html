@@ -1,0 +1,140 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>ID Card</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loading()) {
+  <div class="center-state">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+  } @else if (error()) {
+  <div class="center-state">
+    <ion-text color="danger"><p>{{ error() }}</p></ion-text>
+    <ion-button fill="outline" (click)="load()">Retry</ion-button>
+  </div>
+  } @else {
+
+  <ion-searchbar
+    [value]="query()"
+    (ionInput)="query.set($any($event).detail.value ?? '')"
+    placeholder="Search by name, mobile, or emp ID"
+  ></ion-searchbar>
+
+  @if (employees().length === 0) {
+  <div class="center-state">
+    <ion-text color="medium"><p>No employees found.</p></ion-text>
+  </div>
+  } @else {
+  <ion-list>
+    @for (e of filtered(); track e.id) {
+    <ion-item button="true" [color]="selected()?.id === e.id ? 'light' : undefined" (click)="select(e)">
+      <ion-avatar slot="start">
+        @if (e.photoUrl) {
+        <img [src]="e.photoUrl" alt="{{ e.name }}" />
+        } @else {
+        <ion-icon name="person-circle-outline" class="avatar-fallback"></ion-icon>
+        }
+      </ion-avatar>
+      <ion-label>
+        <h2>{{ e.name }}</h2>
+        <p>{{ e.code }} · {{ e.phone || '—' }}</p>
+      </ion-label>
+      @if (selected()?.id === e.id) {
+      <ion-icon slot="end" name="checkmark-circle" color="success"></ion-icon>
+      }
+    </ion-item>
+    } @empty {
+    <div class="center-state">
+      <ion-text color="medium"><p>No employees match "{{ query() }}".</p></ion-text>
+    </div>
+    }
+  </ion-list>
+  }
+
+  @if (selected(); as e) {
+  <div class="ion-padding">
+    <!-- Validity controls -->
+    <div class="validity-row">
+      <ion-item lines="full" class="validity-item">
+        <ion-label position="stacked">Issued (From)</ion-label>
+        <ion-text>{{ fmtDate(validFrom()) }}</ion-text>
+      </ion-item>
+      <ion-item button="true" lines="full" class="validity-item" (click)="tillPickerOpen.set(true)">
+        <ion-label position="stacked">Valid Till</ion-label>
+        <ion-text>{{ fmtDate(validTill()) }}</ion-text>
+        <ion-icon slot="end" name="calendar-outline" color="medium"></ion-icon>
+      </ion-item>
+    </div>
+
+    <!-- On-screen card preview (mirrors the PDF) -->
+    <div class="id-card">
+      <div class="id-card__header">
+        <div class="id-card__logo">TA</div>
+        <div>
+          <div class="id-card__brand">TECH ANUSIYA</div>
+          <div class="id-card__brand-sub">Employee Identity Card</div>
+        </div>
+      </div>
+
+      <div class="id-card__body">
+        <div class="id-card__photo">
+          @if (e.photoUrl) {
+          <img [src]="e.photoUrl" alt="{{ e.name }}" />
+          } @else {
+          <ion-icon name="person-circle-outline"></ion-icon>
+          }
+        </div>
+        <div class="id-card__name">{{ e.name }}</div>
+
+        <div class="id-card__fields">
+          <div class="id-card__field"><span>Emp ID</span><b>{{ e.code || '-' }}</b></div>
+          <div class="id-card__field"><span>Designation</span><b>{{ e.roleName || '-' }}</b></div>
+          <div class="id-card__field"><span>Blood Group</span><b>{{ e.bloodGroup || '-' }}</b></div>
+          <div class="id-card__field"><span>Date of Birth</span><b>{{ fmtDate(e.dob) }}</b></div>
+          <div class="id-card__field"><span>Mobile</span><b>{{ e.phone || '-' }}</b></div>
+        </div>
+
+        <div class="id-card__validity">
+          Valid From: {{ validFrom() }} &nbsp;&nbsp; Valid Till: {{ validTill() }}
+        </div>
+      </div>
+
+      <div class="id-card__footer">Tech Anusiya - Innovating Together</div>
+    </div>
+
+    @if (!e.photoUrl) {
+    <ion-note color="medium" class="no-photo-note">
+      No photo on file. Add one by editing this employee and capturing the face — the card will then show it.
+    </ion-note>
+    }
+
+    <ion-button expand="block" class="download-btn" (click)="downloadPdf()">
+      <ion-icon slot="start" name="download-outline"></ion-icon>
+      Download / Share PDF
+    </ion-button>
+  </div>
+  }
+  }
+</ion-content>
+
+<!-- Valid Till picker -->
+<ion-modal [isOpen]="tillPickerOpen()" (didDismiss)="tillPickerOpen.set(false)">
+  <ng-template>
+    <ion-datetime
+      presentation="date"
+      [value]="tillForPicker"
+      [min]="validFrom()"
+      [preferWheel]="true"
+      (ionChange)="onTillSelected($any($event).detail.value)"
+    >
+      <ion-buttons slot="buttons">
+        <ion-button color="medium" (click)="tillPickerOpen.set(false)">Cancel</ion-button>
+      </ion-buttons>
+    </ion-datetime>
+  </ng-template>
+</ion-modal>
