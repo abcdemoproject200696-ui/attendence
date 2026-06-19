@@ -64,6 +64,8 @@ public class EmployeesController : ControllerBase
             IsActive = dto.IsActive,
             PhotoUrl = dto.PhotoUrl,
             Gender = dto.Gender,
+            BloodGroup = dto.BloodGroup,
+            Dob = dto.Dob,
             FaceDescriptors = dto.FaceDescriptors is { Count: > 0 } ? dto.FaceDescriptors : null,
             PasswordHash = string.IsNullOrEmpty(dto.Password) ? null : PasswordHasher.Hash(dto.Password),
             CreatedAt = DateTime.UtcNow
@@ -101,6 +103,8 @@ public class EmployeesController : ControllerBase
         e.IsActive = dto.IsActive;
         e.PhotoUrl = dto.PhotoUrl;
         e.Gender = dto.Gender;
+        e.BloodGroup = dto.BloodGroup;
+        e.Dob = dto.Dob;
         // Provided => replace enrolled faces. Omitted/empty => keep existing.
         if (dto.FaceDescriptors is { Count: > 0 })
             e.FaceDescriptors = dto.FaceDescriptors;

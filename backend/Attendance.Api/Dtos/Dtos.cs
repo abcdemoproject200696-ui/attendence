@@ -37,7 +37,7 @@ public class RoleInputDto
 // ---------- Employee ----------
 public record EmployeeDto(
     int Id, string Code, string Name, int RoleId, string RoleName, string? Email, string? Phone,
-    int ShiftId, decimal MonthlySalary, bool IsActive, string? PhotoUrl, string? Gender, bool HasFace, int FaceCount, DateTime CreatedAt);
+    int ShiftId, decimal MonthlySalary, bool IsActive, string? PhotoUrl, string? Gender, string? BloodGroup, string? Dob, bool HasFace, int FaceCount, DateTime CreatedAt);
 
 public class EmployeeInputDto
 {
@@ -52,6 +52,8 @@ public class EmployeeInputDto
     public bool IsActive { get; set; } = true;
     public string? PhotoUrl { get; set; }
     public string? Gender { get; set; }
+    public string? BloodGroup { get; set; }
+    public string? Dob { get; set; }
     /// <summary>1..5 face descriptors (each 128-d). When provided, replaces the employee's enrolled faces.</summary>
     public List<List<double>>? FaceDescriptors { get; set; }
     /// <summary>Login password. When non-empty, sets/resets the hash; empty/null on update keeps existing.</summary>

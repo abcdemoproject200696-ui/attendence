@@ -92,6 +92,10 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Gender\" text;");
         await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"BloodGroup\" text;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Dob\" text;");
+        await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"PhotoUrl\" text;");
     }
     else
@@ -119,6 +123,18 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Employees\" ADD COLUMN \"Gender\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"BloodGroup\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"Dob\" TEXT;");
         }
         catch { /* column already exists */ }
         try
