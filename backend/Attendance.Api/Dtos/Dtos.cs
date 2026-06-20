@@ -81,6 +81,21 @@ public record LoginResultDto(
     int EmployeeId, string Code, string Name, int RoleId, string RoleName, List<string> AllowedPages,
     string? PhotoUrl = null);
 
+// ---------- Forgot / reset password (OTP) ----------
+public class ForgotOtpRequestDto
+{
+    public string? Code { get; set; }
+}
+
+public class ResetPasswordRequestDto
+{
+    public string? Code { get; set; }
+    public string? Otp { get; set; }
+    public string? Password { get; set; }
+}
+
+public record OtpResponseDto(string Otp);
+
 // ---------- Punch ----------
 public record PunchDto(
     int Id, int EmployeeId, string? EmployeeCode, string? EmployeeName, DateTime Timestamp, string Direction,

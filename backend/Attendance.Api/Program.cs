@@ -37,6 +37,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 // ---- App services ----
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<PermissionService>();
+builder.Services.AddSingleton<OtpService>();
 
 // ---- Controllers + JSON (camelCase default; enums as strings) ----
 builder.Services.AddControllers()

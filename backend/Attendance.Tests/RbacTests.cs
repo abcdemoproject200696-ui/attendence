@@ -37,7 +37,7 @@ public class RbacTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    private AuthController Auth() => new(_db, new PermissionService(_db));
+    private AuthController Auth() => new(_db, new PermissionService(_db), new OtpService());
     private RolesController Roles() => new(_db, new PermissionService(_db));
 
     [Fact]
