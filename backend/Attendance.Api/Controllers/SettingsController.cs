@@ -11,7 +11,10 @@ namespace Attendance.Api.Controllers;
 public class SettingsController : ControllerBase
 {
     private const double MinThreshold = 0.3;
-    private const double MaxThreshold = 0.7;
+    // Raised from 0.7 to allow web (face-api crop) matching of mobile (ML Kit crop)
+    // enrolled faces, whose cross-detector distance runs a bit higher. The match
+    // margin (winner must be clearly closer than runner-up) still guards false matches.
+    private const double MaxThreshold = 1.2;
 
     private readonly AppDbContext _db;
     public SettingsController(AppDbContext db) => _db = db;

@@ -48,7 +48,12 @@ public class AttendanceController : ControllerBase
             var match = await _svc.MatchFaceAsync(req.FaceDescriptor);
             employee = match.Employee;
             if (employee is null)
-                return NotFound(new { message = "No matching face found. Please enroll or use code." });
+                return NotFound(new
+                {
+                    message = $"No matching face found (nearest {Math.Round(match.Distance, 3)}, threshold {threshold}).",
+                    nearest = Math.Round(match.Distance, 3),
+                    threshold,
+                });
 
             matchDistance = Math.Round(match.Distance, 3);
             matchConfidence = (int)Math.Round(
