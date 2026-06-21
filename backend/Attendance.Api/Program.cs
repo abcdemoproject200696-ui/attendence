@@ -98,6 +98,18 @@ using (var scope = app.Services.CreateScope())
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Dob\" text;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"PhotoUrl\" text;");
+        // Kanban tasks table (EnsureCreated never adds new tables to an existing DB).
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"Tasks\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"Title\" text NOT NULL, " +
+            "\"Description\" text NULL, " +
+            "\"AssigneeId\" integer NOT NULL, " +
+            "\"AssignedById\" integer NOT NULL, " +
+            "\"Status\" text NOT NULL, " +
+            "\"Priority\" text NOT NULL, " +
+            "\"DueDate\" text NULL, " +
+            "\"CreatedAt\" timestamptz NOT NULL);");
     }
     else
     {
@@ -144,6 +156,22 @@ using (var scope = app.Services.CreateScope())
                 "ALTER TABLE \"Employees\" ADD COLUMN \"PhotoUrl\" TEXT;");
         }
         catch { /* column already exists */ }
+        try
+        {
+            // Kanban tasks table (SQLite local dev). IF NOT EXISTS keeps it idempotent.
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"Tasks\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_Tasks\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"Title\" TEXT NOT NULL, " +
+                "\"Description\" TEXT NULL, " +
+                "\"AssigneeId\" INTEGER NOT NULL, " +
+                "\"AssignedById\" INTEGER NOT NULL, " +
+                "\"Status\" TEXT NOT NULL, " +
+                "\"Priority\" TEXT NOT NULL, " +
+                "\"DueDate\" TEXT NULL, " +
+                "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
     }
 
     await DbSeeder.SeedAsync(db);

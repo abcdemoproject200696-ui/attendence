@@ -217,3 +217,25 @@ public record EmployeeSalaryRowDto(
     int TotalNetMinutes, decimal NetPayable);
 
 public record SalaryAllDto(string Month, List<EmployeeSalaryRowDto> Rows, decimal TotalNetPayable);
+
+// ---------- Task (Kanban) ----------
+public record TaskDto(
+    int Id, string Title, string? Description, int AssigneeId, string AssigneeName,
+    int AssignedById, string AssignedByName, string Status, string Priority,
+    string? DueDate, DateTime CreatedAt);
+
+public class TaskInputDto
+{
+    [Required] public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    [Required] public int AssigneeId { get; set; }
+    public int? AssignedById { get; set; }
+    public string? Status { get; set; }
+    public string? Priority { get; set; }
+    public string? DueDate { get; set; }
+}
+
+public class TaskStatusInputDto
+{
+    [Required] public string Status { get; set; } = string.Empty;
+}

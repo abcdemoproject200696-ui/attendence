@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<RolePagePermission> RolePagePermissions => Set<RolePagePermission>();
+    public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -163,6 +164,27 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.PageId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.RoleId, x.PageId }).IsUnique();
+        });
+
+        // ---- TaskItem (table "Tasks") ----
+        // Two FKs to Employee (Assignee + AssignedBy). Use NoAction so EF doesn't
+        // try to create multiple cascade paths (which SQL Server/PG reject) and so
+        // deleting an employee never silently nukes tasks. Nav is optional (for Include).
+        b.Entity<TaskItem>(e =>
+        {
+            e.ToTable("Tasks");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Title).IsRequired();
+            e.Property(x => x.Status).IsRequired();
+            e.Property(x => x.Priority).IsRequired();
+            e.HasOne(x => x.Assignee)
+                .WithMany()
+                .HasForeignKey(x => x.AssigneeId)
+                .OnDelete(DeleteBehavior.NoAction);
+            e.HasOne(x => x.AssignedBy)
+                .WithMany()
+                .HasForeignKey(x => x.AssignedById)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

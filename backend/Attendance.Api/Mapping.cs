@@ -41,4 +41,9 @@ public static class Mapping
     public static LeaveDto ToDto(this LeaveRequest l) => new(
         l.Id, l.EmployeeId, l.Employee?.Name, l.FromDate.ToString(DateFmt),
         l.ToDate.ToString(DateFmt), l.Type.ToString(), l.IsPaid, l.Status.ToString(), l.Reason);
+
+    public static TaskDto ToDto(this TaskItem t) => new(
+        t.Id, t.Title, t.Description, t.AssigneeId, t.Assignee?.Name ?? string.Empty,
+        t.AssignedById, t.AssignedBy?.Name ?? string.Empty, t.Status, t.Priority,
+        t.DueDate, t.CreatedAt);
 }
