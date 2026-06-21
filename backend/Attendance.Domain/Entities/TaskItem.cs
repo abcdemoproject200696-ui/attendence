@@ -29,5 +29,15 @@ public class TaskItem
     /// <summary>ISO date "yyyy-MM-dd" (nullable).</summary>
     public string? DueDate { get; set; }
 
+    public int? ProjectId { get; set; }
+    [ForeignKey(nameof(ProjectId))]
+    public Project? Project { get; set; }
+
+    /// <summary>ISO date-time "yyyy-MM-ddTHH:mm" (nullable).</summary>
+    public string? StartTime { get; set; }
+
+    /// <summary>ISO date-time "yyyy-MM-ddTHH:mm" (nullable).</summary>
+    public string? EndTime { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

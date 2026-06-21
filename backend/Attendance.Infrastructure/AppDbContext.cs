@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<RolePagePermission> RolePagePermissions => Set<RolePagePermission>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -185,6 +187,42 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.AssignedById)
                 .OnDelete(DeleteBehavior.NoAction);
+            // Optional project link. NoAction: deleting a project does NOT auto-null/cascade
+            // tasks at the DB level — the controller handles project-delete cascade explicitly.
+            e.HasOne(x => x.Project)
+                .WithMany()
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ---- Project (table "Projects") ----
+        // CreatedBy -> Employee uses NoAction so deleting an employee never silently
+        // nukes projects (and to avoid multiple cascade paths).
+        b.Entity<Project>(e =>
+        {
+            e.ToTable("Projects");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).IsRequired();
+            e.HasOne(x => x.CreatedBy)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ---- TaskAttachment (table "TaskAttachments") ----
+        // FK TaskId -> Tasks.Id with CASCADE: deleting a task removes its attachments.
+        // SQLite (EnsureCreated in tests) honours this cascade too.
+        b.Entity<TaskAttachment>(e =>
+        {
+            e.ToTable("TaskAttachments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.FileName).IsRequired();
+            e.Property(x => x.MimeType).IsRequired();
+            e.Property(x => x.DataBase64).IsRequired();
+            e.HasOne(x => x.Task)
+                .WithMany()
+                .HasForeignKey(x => x.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -42,8 +42,19 @@ public static class Mapping
         l.Id, l.EmployeeId, l.Employee?.Name, l.FromDate.ToString(DateFmt),
         l.ToDate.ToString(DateFmt), l.Type.ToString(), l.IsPaid, l.Status.ToString(), l.Reason);
 
-    public static TaskDto ToDto(this TaskItem t) => new(
+    public static TaskDto ToDto(this TaskItem t, int attachmentCount = 0) => new(
         t.Id, t.Title, t.Description, t.AssigneeId, t.Assignee?.Name ?? string.Empty,
         t.AssignedById, t.AssignedBy?.Name ?? string.Empty, t.Status, t.Priority,
-        t.DueDate, t.CreatedAt);
+        t.DueDate, t.ProjectId, t.Project?.Name, t.StartTime, t.EndTime,
+        attachmentCount, t.CreatedAt);
+
+    public static ProjectDto ToDto(this Project p, int taskCount, int empCount) => new(
+        p.Id, p.Name, p.Description, p.Status, p.CreatedById, p.CreatedBy?.Name,
+        p.CreatedAt, taskCount, empCount);
+
+    public static AttachmentDto ToDto(this TaskAttachment a) => new(
+        a.Id, a.TaskId, a.FileName, a.MimeType, a.CreatedAt);
+
+    public static AttachmentDataDto ToDataDto(this TaskAttachment a) => new(
+        a.Id, a.TaskId, a.FileName, a.MimeType, a.DataBase64, a.CreatedAt);
 }

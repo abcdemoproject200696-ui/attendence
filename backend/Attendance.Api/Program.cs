@@ -110,6 +110,34 @@ using (var scope = app.Services.CreateScope())
             "\"Priority\" text NOT NULL, " +
             "\"DueDate\" text NULL, " +
             "\"CreatedAt\" timestamptz NOT NULL);");
+        // New task columns (project link + time window). IF NOT EXISTS keeps it idempotent.
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Tasks\" ADD COLUMN IF NOT EXISTS \"ProjectId\" integer NULL;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Tasks\" ADD COLUMN IF NOT EXISTS \"StartTime\" text NULL;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Tasks\" ADD COLUMN IF NOT EXISTS \"EndTime\" text NULL;");
+        // Projects table.
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"Projects\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"Name\" text NOT NULL, " +
+            "\"Description\" text NULL, " +
+            "\"Status\" text NOT NULL DEFAULT 'Active', " +
+            "\"CreatedById\" integer NOT NULL, " +
+            "\"CreatedAt\" timestamptz NOT NULL);");
+        // In case "Projects" already exists without Status.
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Projects\" ADD COLUMN IF NOT EXISTS \"Status\" text NOT NULL DEFAULT 'Active';");
+        // Task attachments table.
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"TaskAttachments\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"TaskId\" integer NOT NULL, " +
+            "\"FileName\" text NOT NULL, " +
+            "\"MimeType\" text NOT NULL, " +
+            "\"DataBase64\" text NOT NULL, " +
+            "\"CreatedAt\" timestamptz NOT NULL);");
     }
     else
     {
@@ -169,6 +197,49 @@ using (var scope = app.Services.CreateScope())
                 "\"Status\" TEXT NOT NULL, " +
                 "\"Priority\" TEXT NOT NULL, " +
                 "\"DueDate\" TEXT NULL, " +
+                "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Tasks\" ADD COLUMN \"ProjectId\" INTEGER NULL;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Tasks\" ADD COLUMN \"StartTime\" TEXT NULL;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Tasks\" ADD COLUMN \"EndTime\" TEXT NULL;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"Projects\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_Projects\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"Name\" TEXT NOT NULL, " +
+                "\"Description\" TEXT NULL, " +
+                "\"Status\" TEXT NOT NULL DEFAULT 'Active', " +
+                "\"CreatedById\" INTEGER NOT NULL, " +
+                "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Projects\" ADD COLUMN \"Status\" TEXT NOT NULL DEFAULT 'Active';"); } catch { /* column exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"TaskAttachments\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_TaskAttachments\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"TaskId\" INTEGER NOT NULL, " +
+                "\"FileName\" TEXT NOT NULL, " +
+                "\"MimeType\" TEXT NOT NULL, " +
+                "\"DataBase64\" TEXT NOT NULL, " +
                 "\"CreatedAt\" TEXT NOT NULL);");
         }
         catch { /* table already exists */ }

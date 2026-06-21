@@ -222,7 +222,8 @@ public record SalaryAllDto(string Month, List<EmployeeSalaryRowDto> Rows, decima
 public record TaskDto(
     int Id, string Title, string? Description, int AssigneeId, string AssigneeName,
     int AssignedById, string AssignedByName, string Status, string Priority,
-    string? DueDate, DateTime CreatedAt);
+    string? DueDate, int? ProjectId, string? ProjectName, string? StartTime, string? EndTime,
+    int AttachmentCount, DateTime CreatedAt);
 
 public class TaskInputDto
 {
@@ -233,9 +234,47 @@ public class TaskInputDto
     public string? Status { get; set; }
     public string? Priority { get; set; }
     public string? DueDate { get; set; }
+    public int? ProjectId { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
 }
 
 public class TaskStatusInputDto
 {
     [Required] public string Status { get; set; } = string.Empty;
+}
+
+// ---------- Employee (brief) ----------
+public record EmployeeBriefDto(int Id, string Name, string Code);
+
+// ---------- Project ----------
+public record ProjectDto(
+    int Id, string Name, string? Description, string Status, int CreatedById, string? CreatedByName,
+    DateTime CreatedAt, int TaskCount, int EmployeeCount);
+
+public record ProjectDetailDto(
+    int Id, string Name, string? Description, string Status, int CreatedById, string? CreatedByName,
+    DateTime CreatedAt, int TaskCount, int EmployeeCount,
+    List<TaskDto> Tasks, List<EmployeeBriefDto> Employees);
+
+public class ProjectInputDto
+{
+    [Required] public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Status { get; set; } // Active | Hold | Inactive
+    public int? CreatedById { get; set; }
+}
+
+// ---------- Task attachment ----------
+public record AttachmentDto(
+    int Id, int TaskId, string FileName, string MimeType, DateTime CreatedAt);
+
+public record AttachmentDataDto(
+    int Id, int TaskId, string FileName, string MimeType, string DataBase64, DateTime CreatedAt);
+
+public class AttachmentInputDto
+{
+    [Required] public string FileName { get; set; } = string.Empty;
+    [Required] public string MimeType { get; set; } = string.Empty;
+    [Required] public string DataBase64 { get; set; } = string.Empty;
 }
