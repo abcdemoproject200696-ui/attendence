@@ -28,12 +28,17 @@ public class AuthController : ControllerBase
     {
         // Code is matched case-INSENSITIVELY (emp001 == EMP001). Password stays EXACT.
         var code = (dto.Code ?? string.Empty).Trim().ToUpperInvariant();
+        // Look up WITHOUT the IsActive filter so we can give an inactive employee a clear
+        // message (after verifying the password, so we don't reveal accounts to strangers).
         var employee = await _db.Employees.AsNoTracking()
             .Include(e => e.Role)
-            .FirstOrDefaultAsync(e => e.Code.ToUpper() == code && e.IsActive);
+            .FirstOrDefaultAsync(e => e.Code.ToUpper() == code);
 
         if (employee is null || !PasswordHasher.Verify(dto.Password ?? string.Empty, employee.PasswordHash))
             return Unauthorized("Invalid code or password.");
+
+        if (!employee.IsActive)
+            return StatusCode(403, "Your account is inactive. Please contact admin.");
 
         var allowedPages = await _permissions.GetAllowedPageKeysAsync(employee.RoleId);
 
