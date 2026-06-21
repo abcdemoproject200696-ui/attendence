@@ -38,7 +38,7 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid code or password.");
 
         if (!employee.IsActive)
-            return StatusCode(403, "Your account is inactive. Please contact admin.");
+            return StatusCode(403, "Your account is inactive. Please contact HR.");
 
         var allowedPages = await _permissions.GetAllowedPageKeysAsync(employee.RoleId);
 
