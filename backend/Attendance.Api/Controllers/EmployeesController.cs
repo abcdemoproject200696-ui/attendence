@@ -105,9 +105,18 @@ public class EmployeesController : ControllerBase
         e.Gender = dto.Gender;
         e.BloodGroup = dto.BloodGroup;
         e.Dob = dto.Dob;
-        // Provided => replace enrolled faces. Omitted/empty => keep existing.
+        // Provided => APPEND to existing enrolled faces (keep the most recent 10) so a
+        // person can be enrolled on BOTH web and mobile and recognised on either platform
+        // (each platform's scan matches its own enrolled set). Omitted/empty => keep existing.
         if (dto.FaceDescriptors is { Count: > 0 })
-            e.FaceDescriptors = dto.FaceDescriptors;
+        {
+            var combined = (e.FaceDescriptors ?? new List<List<double>>())
+                .Concat(dto.FaceDescriptors).ToList();
+            const int maxStored = 10;
+            if (combined.Count > maxStored)
+                combined = combined.Skip(combined.Count - maxStored).ToList();
+            e.FaceDescriptors = combined;
+        }
         // Provided non-empty => set/reset password. Empty/null => keep existing.
         if (!string.IsNullOrEmpty(dto.Password))
             e.PasswordHash = PasswordHasher.Hash(dto.Password);
