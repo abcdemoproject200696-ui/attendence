@@ -33,6 +33,11 @@ public class AttachmentsController : ControllerBase
         if (!await _db.Tasks.AnyAsync(t => t.Id == taskId))
             return BadRequest($"Task {taskId} does not exist.");
 
+        // Cap size: attachments are stored as base64 in the free 1GB DB, so a few
+        // big videos could fill it. ~35M base64 chars ≈ 25MB file.
+        if ((dto.DataBase64?.Length ?? 0) > 35_000_000)
+            return BadRequest("File is too large. Please keep attachments under ~25 MB.");
+
         var a = new TaskAttachment
         {
             TaskId = taskId,
@@ -52,6 +57,21 @@ public class AttachmentsController : ControllerBase
     {
         var a = await _db.TaskAttachments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         return a is null ? NotFound() : Ok(a.ToDataDto());
+    }
+
+    /// <summary>Stream an attachment's raw bytes with its content-type, so an
+    /// &lt;img&gt;/&lt;video&gt; (or Image.network / VideoPlayer) can load it by URL.
+    /// Range processing is enabled so video seeking works.</summary>
+    [HttpGet("api/attachments/{id:int}/raw")]
+    public async Task<IActionResult> GetRaw(int id)
+    {
+        var a = await _db.TaskAttachments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (a is null) return NotFound();
+        byte[] bytes;
+        try { bytes = Convert.FromBase64String(a.DataBase64); }
+        catch { return NotFound(); }
+        var mime = string.IsNullOrEmpty(a.MimeType) ? "application/octet-stream" : a.MimeType;
+        return File(bytes, mime, enableRangeProcessing: true);
     }
 
     [HttpDelete("api/attachments/{id:int}")]
