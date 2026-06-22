@@ -1,6 +1,6 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
-  "apkUrl": "https://github.com/abcdemoproject200696-ui/attendence/releases/download/v1.0.1/app-arm64-v8a-release.apk",
-  "notes": "ID card, profile photo, blood group & DOB, plus in-app update."
+  "versionCode": 3,
+  "versionName": "1.0.2",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.2.apk",
+  "notes": "Test update: in-app auto-update demo (v1.0.2)."
 }
