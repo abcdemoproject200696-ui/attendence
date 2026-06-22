@@ -18,6 +18,11 @@ var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port))
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+// Allow large attachment uploads (videos). A ~50MB file is ~70MB once base64'd
+// inside the JSON body, so raise Kestrel's default 30MB cap. Keep in sync with
+// the ~70M-char limit in AttachmentsController.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 80_000_000);
+
 // ---- EF Core: pick provider at runtime ----
 // PostgreSQL (production / Render) if DATABASE_URL or ConnectionStrings__DefaultConnection is set,
 // otherwise SQLite local fallback (no DB install needed for `dotnet run`).
@@ -61,10 +66,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicy, policy =>
     {
+        // ExposeHeaders lets the browser READ our custom "X-Account-Inactive"
+        // response header (CORS hides non-safelisted headers otherwise).
         if (frontendOrigins is { Length: > 0 })
-            policy.WithOrigins(frontendOrigins).AllowAnyHeader().AllowAnyMethod();
+            policy.WithOrigins(frontendOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("X-Account-Inactive");
         else
-            policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod();
+            policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("X-Account-Inactive");
     });
 });
 
@@ -255,6 +262,38 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(CorsPolicy);
+
+// ---- Real-time active-account gate ----
+// No JWT in this app, so each client sends its identity via the "X-Emp-Id" header
+// after login. On every (non-auth) request we re-check that the employee is still
+// active; the moment an admin sets them inactive, their NEXT call gets 403 + the
+// "X-Account-Inactive" header, and the client force-logs-out to the login page.
+// Auth endpoints (/api/auth/*) are skipped — login itself already reports inactive,
+// and forgot/reset-password already require an active account. Requests without the
+// header (anonymous/legacy) pass through unchanged.
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? string.Empty;
+    if (!path.StartsWith("/api/auth", StringComparison.OrdinalIgnoreCase)
+        && context.Request.Headers.TryGetValue("X-Emp-Id", out var idValue)
+        && int.TryParse(idValue, out var empId))
+    {
+        var db = context.RequestServices.GetRequiredService<AppDbContext>();
+        var isActive = await db.Employees.AsNoTracking()
+            .Where(e => e.Id == empId)
+            .Select(e => (bool?)e.IsActive)
+            .FirstOrDefaultAsync();
+        if (isActive != true)
+        {
+            context.Response.StatusCode = 403;
+            context.Response.Headers["X-Account-Inactive"] = "1";
+            await context.Response.WriteAsync("Your account is inactive. Please contact HR.");
+            return;
+        }
+    }
+    await next();
+});
+
 app.UseAuthorization();
 app.MapControllers();
 

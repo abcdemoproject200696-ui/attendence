@@ -34,9 +34,10 @@ public class AttachmentsController : ControllerBase
             return BadRequest($"Task {taskId} does not exist.");
 
         // Cap size: attachments are stored as base64 in the free 1GB DB, so a few
-        // big videos could fill it. ~35M base64 chars ≈ 25MB file.
-        if ((dto.DataBase64?.Length ?? 0) > 35_000_000)
-            return BadRequest("File is too large. Please keep attachments under ~25 MB.");
+        // big videos could fill it. ~70M base64 chars ≈ 50MB file. (Kestrel's
+        // MaxRequestBodySize in Program.cs is raised to match — keep them in sync.)
+        if ((dto.DataBase64?.Length ?? 0) > 70_000_000)
+            return BadRequest("File is too large. Please keep attachments under ~50 MB.");
 
         var a = new TaskAttachment
         {
