@@ -1,0 +1,20 @@
+name: keep-backend-awake
+# Render's free tier sleeps the service after ~15 min idle, so the next request
+# takes ~25-50s (cold start). This pings the API every ~10 min to keep it warm.
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes (GitHub may delay a few min)
+  workflow_dispatch:           # allow manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -m 60 -o /dev/null -w "%{http_code}" https://attendance-api-lbpn.onrender.com/api/pages || echo "000")
+            echo "ping $i -> HTTP $code"
+            [ "$code" = "200" ] && break
+            sleep 5
+          done
