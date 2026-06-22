@@ -1,5 +1,5 @@
 {
-  "versionCode": 3,
+  "versionCode": 100,
   "versionName": "1.0.2",
   "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.2.apk",
   "notes": "Test update: in-app auto-update demo (v1.0.2)."
