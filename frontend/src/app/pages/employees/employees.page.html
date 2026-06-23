@@ -46,7 +46,7 @@
           <ion-button size="small" fill="outline" (click)="openEdit(emp)">
             <ion-icon slot="start" name="create-outline"></ion-icon> Edit
           </ion-button>
-          @if (isAdmin()) {
+          @if (isAdmin() && emp.roleId !== 1) {
           <ion-button size="small" fill="outline" color="danger" (click)="confirmDelete(emp)">
             <ion-icon slot="start" name="trash-outline"></ion-icon> Delete
           </ion-button>

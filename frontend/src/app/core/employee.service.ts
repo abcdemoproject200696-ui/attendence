@@ -22,6 +22,12 @@ export class EmployeeService {
     return this.http.post<Employee>(this.base, data);
   }
 
+  // Public self-registration -> /employees/signup. Backend ALWAYS creates the
+  // account inactive; an admin must activate it before the person can log in.
+  signup(data: EmployeeInput): Observable<Employee> {
+    return this.http.post<Employee>(`${this.base}/signup`, data);
+  }
+
   update(id: number, data: EmployeeInput): Observable<Employee> {
     return this.http.put<Employee>(`${this.base}/${id}`, data);
   }

@@ -29,6 +29,17 @@ public class EmployeesController : ControllerBase
         return e is null ? NotFound() : Ok(e.ToDto());
     }
 
+    // Public self-registration. ALWAYS created inactive (forced server-side so the
+    // client can't bypass it) — an admin reviews the details and activates the
+    // account; only then can the person log in (login + the active-account gate
+    // both reject inactive users).
+    [HttpPost("signup")]
+    public Task<ActionResult<EmployeeDto>> Signup(EmployeeInputDto dto)
+    {
+        dto.IsActive = false;
+        return Create(dto);
+    }
+
     [HttpPost]
     public async Task<ActionResult<EmployeeDto>> Create(EmployeeInputDto dto)
     {
@@ -131,6 +142,11 @@ public class EmployeesController : ControllerBase
     {
         var e = await _db.Employees.FirstOrDefaultAsync(x => x.Id == id);
         if (e is null) return NotFound();
+
+        // Admin accounts are protected: NOBODY (not even another admin or HR) can
+        // delete them. Enforced server-side so no client can bypass it.
+        if (e.RoleId == 1)
+            return StatusCode(403, "Admin accounts cannot be deleted.");
 
         // Full cascade: remove ALL of this employee's related records first, then the
         // employee (face descriptors live on the employee row, so they go with it).

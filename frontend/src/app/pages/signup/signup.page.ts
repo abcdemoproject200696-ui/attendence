@@ -61,11 +61,11 @@ export class SignupPage {
   // Receives the validated EmployeeInput and creates the account.
   onSubmit(payload: EmployeeInput): void {
     this.saving.set(true);
-    this.employeeSvc.create(payload).subscribe({
+    this.employeeSvc.signup(payload).subscribe({
       next: () => {
         this.saving.set(false);
         this.employeeForm?.stopCamera();
-        this.toast('Account created. Please log in.', 'success');
+        this.toast('Account created but INACTIVE — an admin must approve it before you can log in.', 'warning');
         void this.router.navigate(['/login']);
       },
       error: (err: HttpErrorResponse) => {
