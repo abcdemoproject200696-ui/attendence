@@ -278,3 +278,12 @@ public class AttachmentInputDto
     [Required] public string MimeType { get; set; } = string.Empty;
     [Required] public string DataBase64 { get; set; } = string.Empty;
 }
+
+public record TaskCommentDto(
+    int Id, int TaskId, int AuthorId, string AuthorName, string Body, DateTime CreatedAt);
+
+public class TaskCommentInputDto
+{
+    public int AuthorId { get; set; }
+    [Required] public string Body { get; set; } = string.Empty;
+}

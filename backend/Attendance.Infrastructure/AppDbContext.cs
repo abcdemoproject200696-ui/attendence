@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

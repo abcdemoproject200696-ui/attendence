@@ -145,6 +145,15 @@ using (var scope = app.Services.CreateScope())
             "\"MimeType\" text NOT NULL, " +
             "\"DataBase64\" text NOT NULL, " +
             "\"CreatedAt\" timestamptz NOT NULL);");
+        // Task comments table (rich-text body, may embed small base64 images).
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"TaskComments\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"TaskId\" integer NOT NULL, " +
+            "\"AuthorId\" integer NOT NULL, " +
+            "\"AuthorName\" text NOT NULL, " +
+            "\"Body\" text NOT NULL, " +
+            "\"CreatedAt\" timestamptz NOT NULL);");
     }
     else
     {
@@ -247,6 +256,18 @@ using (var scope = app.Services.CreateScope())
                 "\"FileName\" TEXT NOT NULL, " +
                 "\"MimeType\" TEXT NOT NULL, " +
                 "\"DataBase64\" TEXT NOT NULL, " +
+                "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"TaskComments\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_TaskComments\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"TaskId\" INTEGER NOT NULL, " +
+                "\"AuthorId\" INTEGER NOT NULL, " +
+                "\"AuthorName\" TEXT NOT NULL, " +
+                "\"Body\" TEXT NOT NULL, " +
                 "\"CreatedAt\" TEXT NOT NULL);");
         }
         catch { /* table already exists */ }
