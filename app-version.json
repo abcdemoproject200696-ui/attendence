@@ -1,6 +1,6 @@
 {
-  "versionCode": 2005,
-  "versionName": "1.0.4",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.4.apk",
-  "notes": "Signup now creates an INACTIVE account that an admin must approve before login, and Admin-role accounts can no longer be deleted by anyone."
+  "versionCode": 2007,
+  "versionName": "1.0.6",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.6.apk",
+  "notes": "Task comments with rich text + images (centered, multi-image), attachment fixes (10MB images / 50MB videos, no crash), close button on all popups."
 }
