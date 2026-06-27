@@ -1,6 +1,6 @@
 {
-  "versionCode": 2007,
-  "versionName": "1.0.6",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.6.apk",
-  "notes": "Task comments with rich text + images (centered, multi-image), attachment fixes (10MB images / 50MB videos, no crash), close button on all popups."
+  "versionCode": 2008,
+  "versionName": "1.0.7",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.7.apk",
+  "notes": "Per-employee app theme: each employee can pick their own colour (saved per device, works offline). Fixed: editing an employee (e.g. salary) no longer wipes the enrolled photo, so no needless face re-enrollment."
 }
