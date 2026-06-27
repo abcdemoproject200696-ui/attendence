@@ -112,7 +112,11 @@ public class EmployeesController : ControllerBase
         e.ShiftId = dto.ShiftId;
         e.MonthlySalary = dto.MonthlySalary;
         e.IsActive = dto.IsActive;
-        e.PhotoUrl = dto.PhotoUrl;
+        // Provided non-empty => set new photo. Omitted/empty => KEEP the existing
+        // enrolment photo. Without this guard, editing anything else (e.g. salary)
+        // sent no photoUrl and wiped the picture, forcing a needless re-enrollment.
+        if (!string.IsNullOrEmpty(dto.PhotoUrl))
+            e.PhotoUrl = dto.PhotoUrl;
         e.Gender = dto.Gender;
         e.BloodGroup = dto.BloodGroup;
         e.Dob = dto.Dob;
