@@ -1,6 +1,6 @@
 {
-  "versionCode": 2009,
-  "versionName": "1.0.8",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.8.apk",
-  "notes": "Full theme support: picking a colour now recolours the WHOLE app — buttons, icons, headings and highlights all follow your chosen theme, not just backgrounds. Per-employee, saved per device. Also includes the earlier photo-preserve fix on employee edit."
+  "versionCode": 2010,
+  "versionName": "1.0.9",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.9.apk",
+  "notes": "Comment images: you can now PASTE a screenshot/image straight from the clipboard, plus the existing 'select image from device' option — two buttons in the comment box. Includes the full app theme recolour and the employee photo-preserve fix."
 }
