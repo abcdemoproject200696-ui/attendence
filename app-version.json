@@ -1,6 +1,6 @@
 {
-  "versionCode": 4022,
-  "versionName": "1.3.1",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.3.1.apk",
-  "notes": "Modals (task form/detail, project, leave, holiday, attendance correction) are now vertically centered on screen instead of rising from the bottom, with tall ones scrolling inside — looks right on web/desktop."
+  "versionCode": 4023,
+  "versionName": "1.3.2",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.3.2.apk",
+  "notes": "Add / Edit Employee now opens as a centered modal (like Add Task) instead of a full page."
 }
