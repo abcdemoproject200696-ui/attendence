@@ -4,7 +4,11 @@ public class Employee
 {
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
+    // Full display name = "First Last" (kept in sync from First/Last on save so all
+    // existing screens that read Name keep working).
     public string Name { get; set; } = string.Empty;
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
 
     public int RoleId { get; set; }
     public Role? Role { get; set; }

@@ -17,7 +17,7 @@ public static class Mapping
     public static PageDto ToDto(this Page p) => new(p.Id, p.Key, p.Name, p.Route, p.MenuOrder);
 
     public static EmployeeDto ToDto(this Employee e) => new(
-        e.Id, e.Code, e.Name, e.RoleId, e.Role?.Name ?? string.Empty, e.Email, e.Phone,
+        e.Id, e.Code, e.Name, e.FirstName, e.LastName, e.RoleId, e.Role?.Name ?? string.Empty, e.Email, e.Phone,
         e.ShiftId, e.MonthlySalary, e.IsActive, e.PhotoUrl, e.Gender, e.BloodGroup, e.Dob, e.HasFace, e.FaceCount, e.CreatedAt);
 
     public static PunchDto ToDto(this AttendancePunch p) => new(

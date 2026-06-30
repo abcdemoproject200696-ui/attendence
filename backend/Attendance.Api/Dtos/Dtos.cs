@@ -36,14 +36,17 @@ public class RoleInputDto
 
 // ---------- Employee ----------
 public record EmployeeDto(
-    int Id, string Code, string Name, int RoleId, string RoleName, string? Email, string? Phone,
+    int Id, string Code, string Name, string? FirstName, string? LastName, int RoleId, string RoleName, string? Email, string? Phone,
     int ShiftId, decimal MonthlySalary, bool IsActive, string? PhotoUrl, string? Gender, string? BloodGroup, string? Dob, bool HasFace, int FaceCount, DateTime CreatedAt);
 
 public class EmployeeInputDto
 {
     // Optional: empty/null => backend auto-generates next "EMP00X".
     public string? Code { get; set; }
-    [Required] public string Name { get; set; } = string.Empty;
+    // Name is derived as "First Last" when First/Last are sent; either form works.
+    public string Name { get; set; } = string.Empty;
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     [Required] public int RoleId { get; set; }
     [EmailAddress] public string? Email { get; set; }
     public string? Phone { get; set; }

@@ -51,6 +51,9 @@ public class EmployeesController : ControllerBase
         var faceError = ValidateFaceDescriptors(dto.FaceDescriptors);
         if (faceError is not null) return BadRequest(faceError);
 
+        var name = ResolveName(dto);
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+
         string code;
         if (string.IsNullOrWhiteSpace(dto.Code))
         {
@@ -66,7 +69,9 @@ public class EmployeesController : ControllerBase
         var e = new Employee
         {
             Code = code,
-            Name = dto.Name,
+            Name = name,
+            FirstName = dto.FirstName?.Trim(),
+            LastName = dto.LastName?.Trim(),
             RoleId = dto.RoleId,
             Email = dto.Email,
             Phone = dto.Phone,
@@ -104,8 +109,12 @@ public class EmployeesController : ControllerBase
         var faceError = ValidateFaceDescriptors(dto.FaceDescriptors);
         if (faceError is not null) return BadRequest(faceError);
 
+        var name = ResolveName(dto);
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
         e.Code = newCode;
-        e.Name = dto.Name;
+        e.Name = name;
+        e.FirstName = dto.FirstName?.Trim();
+        e.LastName = dto.LastName?.Trim();
         e.RoleId = dto.RoleId;
         e.Email = dto.Email;
         e.Phone = dto.Phone;
@@ -171,6 +180,14 @@ public class EmployeesController : ControllerBase
     private const int MinFaceDescriptorLength = 64;
     private const int MaxFaceDescriptorLength = 1024;
     private const int MaxFaceDescriptors = 5;
+
+    /// <summary>Combined display name: "First Last" when First/Last are sent, else the
+    /// legacy single Name field. Keeps the Name column populated for all existing screens.</summary>
+    private static string ResolveName(EmployeeInputDto dto)
+    {
+        var combined = $"{dto.FirstName?.Trim()} {dto.LastName?.Trim()}".Trim();
+        return !string.IsNullOrWhiteSpace(combined) ? combined : (dto.Name ?? string.Empty).Trim();
+    }
 
     private static string? ValidateFaceDescriptors(List<List<double>>? descriptors)
     {

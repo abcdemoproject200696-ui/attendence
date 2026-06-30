@@ -105,6 +105,10 @@ using (var scope = app.Services.CreateScope())
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Dob\" text;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"PhotoUrl\" text;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"FirstName\" text;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"LastName\" text;");
         // Kanban tasks table (EnsureCreated never adds new tables to an existing DB).
         await db.Database.ExecuteSqlRawAsync(
             "CREATE TABLE IF NOT EXISTS \"Tasks\" (" +
@@ -195,6 +199,18 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Employees\" ADD COLUMN \"Dob\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"FirstName\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Employees\" ADD COLUMN \"LastName\" TEXT;");
         }
         catch { /* column already exists */ }
         try
