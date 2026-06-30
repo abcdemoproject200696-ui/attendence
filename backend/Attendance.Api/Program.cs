@@ -327,6 +327,11 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.MapControllers();
 
+// Lightweight health check for uptime pingers (e.g. UptimeRobot) that keep the
+// free Render instance from sleeping. Responds 200 to BOTH GET and HEAD so a
+// HEAD-only monitor still shows "Up".
+app.MapMethods("/api/health", new[] { "GET", "HEAD" }, () => Results.Ok("OK"));
+
 app.Run();
 
 // Exposed for potential integration testing.
