@@ -154,6 +154,9 @@ using (var scope = app.Services.CreateScope())
             "\"AuthorName\" text NOT NULL, " +
             "\"Body\" text NOT NULL, " +
             "\"CreatedAt\" timestamptz NOT NULL);");
+        // Threaded replies: parent comment id (added after first deploy).
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"TaskComments\" ADD COLUMN IF NOT EXISTS \"ParentId\" integer NULL;");
     }
     else
     {
@@ -192,6 +195,12 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Employees\" ADD COLUMN \"Dob\" TEXT;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"TaskComments\" ADD COLUMN \"ParentId\" INTEGER NULL;");
         }
         catch { /* column already exists */ }
         try

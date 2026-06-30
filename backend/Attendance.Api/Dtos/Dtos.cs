@@ -280,10 +280,12 @@ public class AttachmentInputDto
 }
 
 public record TaskCommentDto(
-    int Id, int TaskId, int AuthorId, string AuthorName, string Body, DateTime CreatedAt);
+    int Id, int TaskId, int AuthorId, string AuthorName, string Body, DateTime CreatedAt, int? ParentId);
 
 public class TaskCommentInputDto
 {
     public int AuthorId { get; set; }
     [Required] public string Body { get; set; } = string.Empty;
+    // When set, this comment is a reply to comment ParentId (threaded).
+    public int? ParentId { get; set; }
 }

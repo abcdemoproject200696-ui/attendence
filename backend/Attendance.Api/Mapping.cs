@@ -59,5 +59,5 @@ public static class Mapping
         a.Id, a.TaskId, a.FileName, a.MimeType, a.DataBase64, a.CreatedAt);
 
     public static TaskCommentDto ToDto(this TaskComment c) => new(
-        c.Id, c.TaskId, c.AuthorId, c.AuthorName, c.Body, c.CreatedAt);
+        c.Id, c.TaskId, c.AuthorId, c.AuthorName, c.Body, c.CreatedAt, c.ParentId);
 }

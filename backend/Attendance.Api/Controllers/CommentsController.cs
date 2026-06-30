@@ -38,6 +38,11 @@ public class CommentsController : ControllerBase
         if (dto.Body.Length > 12_000_000)
             return BadRequest("Comment is too large. Please use smaller images.");
 
+        // Threaded reply: the parent comment must exist AND belong to this task.
+        if (dto.ParentId is int pid &&
+            !await _db.TaskComments.AnyAsync(x => x.Id == pid && x.TaskId == taskId))
+            return BadRequest("The comment you are replying to was not found on this task.");
+
         var author = await _db.Employees.AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == dto.AuthorId);
 
@@ -47,6 +52,7 @@ public class CommentsController : ControllerBase
             AuthorId = dto.AuthorId,
             AuthorName = author?.Name ?? $"#{dto.AuthorId}",
             Body = dto.Body,
+            ParentId = dto.ParentId,
             CreatedAt = DateTime.UtcNow,
         };
         _db.TaskComments.Add(c);

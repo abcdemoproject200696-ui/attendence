@@ -21,5 +21,11 @@ public class TaskComment
     /// <summary>Rich-text body as Quill Delta JSON (can be large).</summary>
     public string Body { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When set, this comment is a threaded REPLY to another comment on the same
+    /// task (Jira-style). Null = a top-level comment.
+    /// </summary>
+    public int? ParentId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
