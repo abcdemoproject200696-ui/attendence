@@ -1,6 +1,6 @@
 {
-  "versionCode": 2010,
-  "versionName": "1.0.9",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.0.9.apk",
-  "notes": "Comment images: you can now PASTE a screenshot/image straight from the clipboard, plus the existing 'select image from device' option — two buttons in the comment box. Includes the full app theme recolour and the employee photo-preserve fix."
+  "versionCode": 2015,
+  "versionName": "1.2.0",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.0.apk",
+  "notes": "Threaded comments (Jira-style): reply to any comment and replies nest under it. Plus a colourful, easy-to-read Kanban board — each stage (To Do / In Progress / Review / Done) now has its own light colour. Comment image paste/select, ✕ remove, and tap-to-preview included."
 }
