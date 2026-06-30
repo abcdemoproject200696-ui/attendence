@@ -1,6 +1,6 @@
 {
-  "versionCode": 4019,
-  "versionName": "1.2.4",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.4.apk",
-  "notes": "Maintenance update. Includes all recent improvements: per-employee theme, threaded comment replies with tap-to-jump + highlight, comment image paste/select, and the colourful Kanban board."
+  "versionCode": 4020,
+  "versionName": "1.2.5",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.5.apk",
+  "notes": "Redesigned task form into clean Details / Schedule / Attachments sections with consistent padding across all forms. Fixed a false 'update failed' prompt on the web app."
 }
