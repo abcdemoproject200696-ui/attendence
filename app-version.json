@@ -1,5 +1,5 @@
 {
-  "versionCode": 2019,
+  "versionCode": 4019,
   "versionName": "1.2.4",
   "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.4.apk",
   "notes": "Maintenance update. Includes all recent improvements: per-employee theme, threaded comment replies with tap-to-jump + highlight, comment image paste/select, and the colourful Kanban board."
