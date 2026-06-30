@@ -1,6 +1,6 @@
 {
-  "versionCode": 2017,
-  "versionName": "1.2.2",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.2.apk",
-  "notes": "Tap the 'Replying to <name>' tag on a reply to jump straight to its parent comment, which briefly highlights so you can see exactly which comment the reply belongs to. Also a lighter build (dropped unused packages)."
+  "versionCode": 2018,
+  "versionName": "1.2.3",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.2.3.apk",
+  "notes": "Now tap anywhere on a reply (not just the tag) to jump to and highlight the comment it replies to."
 }
