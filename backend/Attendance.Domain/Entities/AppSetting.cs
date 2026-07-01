@@ -26,4 +26,13 @@ public class AppSetting
     /// Admin (roleId 1) can always edit regardless of this flag.
     /// </summary>
     public bool HrCanEditAttendance { get; set; }
+
+    /// <summary>When true, email the assignee whenever a task is assigned to them
+    /// (needs SMTP_USER / SMTP_PASS env vars set). Off by default.</summary>
+    public bool TaskAssignEmail { get; set; }
+
+    /// <summary>When true, self-signup requires an email OTP: the app emails a code,
+    /// the user must enter it, and only a matching code completes registration.
+    /// When false, signup completes immediately (current behaviour). Needs SMTP.</summary>
+    public bool SignupOtpEmail { get; set; }
 }

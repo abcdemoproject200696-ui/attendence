@@ -61,6 +61,23 @@ public class EmployeeInputDto
     public List<List<double>>? FaceDescriptors { get; set; }
     /// <summary>Login password. When non-empty, sets/resets the hash; empty/null on update keeps existing.</summary>
     public string? Password { get; set; }
+    /// <summary>Email OTP entered by the user during signup. Only checked when the admin
+    /// enabled "Signup email OTP verification" in Settings.</summary>
+    public string? Otp { get; set; }
+}
+
+// ---------- Signup OTP ----------
+public class SendOtpRequestDto
+{
+    public string? Email { get; set; }
+}
+
+// ---------- Push notifications ----------
+public class DeviceTokenDto
+{
+    public int EmployeeId { get; set; }
+    public string? Token { get; set; }
+    public string? Platform { get; set; }
 }
 
 // ---------- Page / RBAC ----------
@@ -187,7 +204,7 @@ public class LeaveUpdateDto
 // ---------- App settings ----------
 public record AppSettingDto(
     int Id, double FaceMatchThreshold, bool RequireLiveness, bool VoiceEnabled, bool OvertimePayable,
-    bool HrCanEditAttendance);
+    bool HrCanEditAttendance, bool TaskAssignEmail, bool SignupOtpEmail);
 
 public class AppSettingUpdateDto
 {
@@ -196,6 +213,8 @@ public class AppSettingUpdateDto
     public bool? VoiceEnabled { get; set; }
     public bool? OvertimePayable { get; set; }
     public bool? HrCanEditAttendance { get; set; }
+    public bool? TaskAssignEmail { get; set; }
+    public bool? SignupOtpEmail { get; set; }
 }
 
 // ---------- Monthly report ----------

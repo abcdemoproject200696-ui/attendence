@@ -36,11 +36,18 @@ public record AiResult(bool Ok, string Reply, string Provider, bool Changed, str
 public class AiController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly Attendance.Api.Services.EmailSender _email;
+    private readonly Attendance.Api.Services.PushSender _push;
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(40) };
     private static readonly string[] ValidStatuses = { "ToDo", "InProgress", "Review", "Done" };
     private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Urgent" };
 
-    public AiController(AppDbContext db) => _db = db;
+    public AiController(AppDbContext db, Attendance.Api.Services.EmailSender email, Attendance.Api.Services.PushSender push)
+    {
+        _db = db;
+        _email = email;
+        _push = push;
+    }
 
     // Tells the app which providers actually have a key configured (for the toggle).
     [HttpGet("providers")]
@@ -262,9 +269,46 @@ public class AiController : ControllerBase
         };
         _db.Tasks.Add(t);
         await _db.SaveChangesAsync();
+        await NotifyAssigneeAsync(assignee, title!, project?.Name, due, priority,
+            emps.FirstOrDefault(e => e.Id == by)?.Name);
         var extra = new List<string> { priority, $"due {due}", $"{start[11..]}–{end[11..]}" };
         if (project != null) extra.Add(project.Name);
         return ($"✅ Task \"{title}\" assigned to {assignee.Name} ({string.Join(", ", extra)}).", true);
+    }
+
+    /// <summary>Email the assignee — only when Settings.TaskAssignEmail is on AND SMTP
+    /// env vars are configured. Best-effort; EmailSender swallows its own errors.</summary>
+    private async Task NotifyAssigneeAsync(Employee assignee, string title, string? project,
+        string? due, string? priority, string? assignedBy)
+    {
+        if (!assignee.IsActive) return; // never notify inactive
+
+        // ----- Email (gated by the admin setting) -----
+        if (_email.Enabled && !string.IsNullOrWhiteSpace(assignee.Email))
+        {
+            var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
+            if (settings is not null && settings.TaskAssignEmail)
+                await _email.SendTaskAssignedAsync(
+                    assignee.Email!, assignee.Name, title, project, due, priority, assignedBy);
+        }
+
+        // ----- Phone push (screen-off / app-closed) -----
+        if (_push.Enabled)
+        {
+            var tokens = await _db.DeviceTokens.Where(d => d.EmployeeId == assignee.Id)
+                .Select(d => d.Token).ToListAsync();
+            if (tokens.Count > 0)
+            {
+                var body = string.IsNullOrWhiteSpace(project) ? title : $"{title} · {project}";
+                var dead = await _push.SendToTokensAsync(
+                    tokens, "New task assigned", body, new Dictionary<string, string> { ["type"] = "task" });
+                if (dead.Count > 0)
+                {
+                    _db.DeviceTokens.RemoveRange(_db.DeviceTokens.Where(d => dead.Contains(d.Token)));
+                    await _db.SaveChangesAsync();
+                }
+            }
+        }
     }
 
     private async Task<(string, bool)> ChangeTask(JsonElement a, List<Employee> emps, List<Project> projects)

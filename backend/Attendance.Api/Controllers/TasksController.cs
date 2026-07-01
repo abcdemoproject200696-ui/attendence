@@ -1,4 +1,5 @@
 using Attendance.Api.Dtos;
+using Attendance.Api.Services;
 using Attendance.Domain.Entities;
 using Attendance.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,14 @@ namespace Attendance.Api.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _db;
-    public TasksController(AppDbContext db) => _db = db;
+    private readonly EmailSender _email;
+    private readonly PushSender _push;
+    public TasksController(AppDbContext db, EmailSender email, PushSender push)
+    {
+        _db = db;
+        _email = email;
+        _push = push;
+    }
 
     private static readonly string[] ValidStatuses = { "ToDo", "InProgress", "Review", "Done" };
     private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Urgent" };
@@ -94,7 +102,47 @@ public class TasksController : ControllerBase
         await _db.Entry(t).Reference(x => x.Assignee).LoadAsync();
         await _db.Entry(t).Reference(x => x.AssignedBy).LoadAsync();
         await _db.Entry(t).Reference(x => x.Project).LoadAsync();
+        await NotifyAssigneeAsync(t);
         return CreatedAtAction(nameof(Get), new { id = t.Id }, t.ToDto());
+    }
+
+    /// <summary>Notify the assignee that a task was assigned: an email (only when the
+    /// admin enabled "TaskAssignEmail") AND a phone push (whenever FCM is configured).
+    /// Inactive employees are never notified. Best-effort — never throws.</summary>
+    private async Task NotifyAssigneeAsync(TaskItem t)
+    {
+        if (t.Assignee is null || !t.Assignee.IsActive) return; // never notify inactive
+
+        // ----- Email (gated by the admin setting) -----
+        if (_email.Enabled && !string.IsNullOrWhiteSpace(t.Assignee.Email))
+        {
+            var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
+            if (settings is not null && settings.TaskAssignEmail)
+                await _email.SendTaskAssignedAsync(
+                    t.Assignee.Email!, t.Assignee.Name, t.Title,
+                    t.Project?.Name, t.DueDate, t.Priority, t.AssignedBy?.Name);
+        }
+
+        // ----- Phone push (screen-off / app-closed) -----
+        await PushAssigneeAsync(t.AssigneeId, t.Title, t.Project?.Name);
+    }
+
+    /// <summary>Send an FCM push to every device the assignee is logged in on, and
+    /// prune any tokens FCM reports as dead. No-op when FCM isn't configured.</summary>
+    private async Task PushAssigneeAsync(int employeeId, string title, string? project)
+    {
+        if (!_push.Enabled) return;
+        var tokens = await _db.DeviceTokens.Where(d => d.EmployeeId == employeeId)
+            .Select(d => d.Token).ToListAsync();
+        if (tokens.Count == 0) return;
+        var body = string.IsNullOrWhiteSpace(project) ? title : $"{title} · {project}";
+        var dead = await _push.SendToTokensAsync(
+            tokens, "New task assigned", body, new Dictionary<string, string> { ["type"] = "task" });
+        if (dead.Count > 0)
+        {
+            _db.DeviceTokens.RemoveRange(_db.DeviceTokens.Where(d => dead.Contains(d.Token)));
+            await _db.SaveChangesAsync();
+        }
     }
 
     [HttpPut("{id:int}")]

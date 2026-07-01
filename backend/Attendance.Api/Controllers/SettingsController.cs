@@ -40,6 +40,8 @@ public class SettingsController : ControllerBase
         if (dto.VoiceEnabled.HasValue) settings.VoiceEnabled = dto.VoiceEnabled.Value;
         if (dto.OvertimePayable.HasValue) settings.OvertimePayable = dto.OvertimePayable.Value;
         if (dto.HrCanEditAttendance.HasValue) settings.HrCanEditAttendance = dto.HrCanEditAttendance.Value;
+        if (dto.TaskAssignEmail.HasValue) settings.TaskAssignEmail = dto.TaskAssignEmail.Value;
+        if (dto.SignupOtpEmail.HasValue) settings.SignupOtpEmail = dto.SignupOtpEmail.Value;
 
         await _db.SaveChangesAsync();
         return Ok(settings.ToDto());

@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+    public DbSet<SignupOtp> SignupOtps => Set<SignupOtp>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

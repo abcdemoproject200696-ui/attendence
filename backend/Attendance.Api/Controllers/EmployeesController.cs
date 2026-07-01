@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Attendance.Api.Dtos;
+using Attendance.Api.Services;
 using Attendance.Domain;
 using Attendance.Domain.Entities;
 using Attendance.Infrastructure;
@@ -13,7 +14,16 @@ namespace Attendance.Api.Controllers;
 public class EmployeesController : ControllerBase
 {
     private readonly AppDbContext _db;
-    public EmployeesController(AppDbContext db) => _db = db;
+    private readonly EmailSender _email;
+    public EmployeesController(AppDbContext db, EmailSender email)
+    {
+        _db = db;
+        _email = email;
+    }
+
+    // Basic email-format check (server-side; the app validates too).
+    private static readonly Regex EmailRx =
+        new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetAll()
@@ -29,15 +39,64 @@ public class EmployeesController : ControllerBase
         return e is null ? NotFound() : Ok(e.ToDto());
     }
 
+    // Step 1 of OTP signup: email the applicant a 6-digit code and store it.
+    // Only used when the admin enabled "Signup email OTP verification" in Settings.
+    [HttpPost("signup/send-otp")]
+    public async Task<IActionResult> SendSignupOtp(SendOtpRequestDto dto)
+    {
+        var email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
+        if (!EmailRx.IsMatch(email)) return BadRequest("Please enter a valid email address.");
+
+        var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
+        if (settings is null || !settings.SignupOtpEmail)
+            return BadRequest("Email verification is turned off.");
+        if (!_email.Enabled)
+            return StatusCode(503, "Email is not configured on the server. Please contact the admin.");
+
+        // 6-digit code; one row per email (replace any previous code).
+        var code = Random.Shared.Next(100000, 1000000).ToString();
+        var existing = await _db.SignupOtps.Where(o => o.Email == email).ToListAsync();
+        _db.SignupOtps.RemoveRange(existing);
+        _db.SignupOtps.Add(new SignupOtp { Email = email, Code = code, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var sent = await _email.SendSignupOtpAsync(email, code);
+        if (!sent) return StatusCode(502, "Could not send the verification email. Please try again.");
+        return Ok(new { sent = true });
+    }
+
     // Public self-registration. ALWAYS created inactive (forced server-side so the
     // client can't bypass it) — an admin reviews the details and activates the
     // account; only then can the person log in (login + the active-account gate
     // both reject inactive users).
     [HttpPost("signup")]
-    public Task<ActionResult<EmployeeDto>> Signup(EmployeeInputDto dto)
+    public async Task<ActionResult<EmployeeDto>> Signup(EmployeeInputDto dto)
     {
         dto.IsActive = false;
-        return Create(dto);
+
+        // When OTP verification is on, require a matching, non-expired code for this email.
+        var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
+        if (settings is not null && settings.SignupOtpEmail)
+        {
+            var email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
+            if (!EmailRx.IsMatch(email)) return BadRequest("Please enter a valid email address.");
+            if (string.IsNullOrWhiteSpace(dto.Otp)) return BadRequest("Please enter the verification code sent to your email.");
+
+            var row = await _db.SignupOtps.FirstOrDefaultAsync(o => o.Email == email);
+            if (row is null || row.Code != dto.Otp.Trim())
+                return BadRequest("The verification code is incorrect. Please check and try again.");
+            if (row.CreatedAt < DateTime.UtcNow.AddMinutes(-10))
+            {
+                _db.SignupOtps.Remove(row);
+                await _db.SaveChangesAsync();
+                return BadRequest("The verification code has expired. Please request a new one.");
+            }
+            // Verified — consume the code so it can't be reused.
+            _db.SignupOtps.Remove(row);
+            await _db.SaveChangesAsync();
+        }
+
+        return await Create(dto);
     }
 
     [HttpPost]

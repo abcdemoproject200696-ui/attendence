@@ -43,6 +43,8 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddSingleton<OtpService>();
+builder.Services.AddSingleton<Attendance.Api.Services.EmailSender>();
+builder.Services.AddSingleton<Attendance.Api.Services.PushSender>();
 
 // ---- Controllers + JSON (camelCase default; enums as strings) ----
 builder.Services.AddControllers()
@@ -97,6 +99,10 @@ using (var scope = app.Services.CreateScope())
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"OvertimePayable\" boolean NOT NULL DEFAULT FALSE;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"HrCanEditAttendance\" boolean NOT NULL DEFAULT FALSE;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"TaskAssignEmail\" boolean NOT NULL DEFAULT FALSE;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"SignupOtpEmail\" boolean NOT NULL DEFAULT FALSE;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Gender\" text;");
         await db.Database.ExecuteSqlRawAsync(
@@ -161,6 +167,21 @@ using (var scope = app.Services.CreateScope())
         // Threaded replies: parent comment id (added after first deploy).
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"TaskComments\" ADD COLUMN IF NOT EXISTS \"ParentId\" integer NULL;");
+        // Signup email OTP codes (persisted so they survive a server restart).
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"SignupOtps\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"Email\" text NOT NULL, " +
+            "\"Code\" text NOT NULL, " +
+            "\"CreatedAt\" timestamptz NOT NULL);");
+        // FCM device tokens for push notifications.
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"DeviceTokens\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"EmployeeId\" integer NOT NULL, " +
+            "\"Token\" text NOT NULL, " +
+            "\"Platform\" text NULL, " +
+            "\"UpdatedAt\" timestamptz NOT NULL);");
     }
     else
     {
@@ -181,6 +202,18 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE \"Settings\" ADD COLUMN \"HrCanEditAttendance\" INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Settings\" ADD COLUMN \"TaskAssignEmail\" INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch { /* column already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Settings\" ADD COLUMN \"SignupOtpEmail\" INTEGER NOT NULL DEFAULT 0;");
         }
         catch { /* column already exists */ }
         try
@@ -294,6 +327,27 @@ using (var scope = app.Services.CreateScope())
                 "\"AuthorName\" TEXT NOT NULL, " +
                 "\"Body\" TEXT NOT NULL, " +
                 "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"SignupOtps\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_SignupOtps\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"Email\" TEXT NOT NULL, " +
+                "\"Code\" TEXT NOT NULL, " +
+                "\"CreatedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"DeviceTokens\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_DeviceTokens\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"EmployeeId\" INTEGER NOT NULL, " +
+                "\"Token\" TEXT NOT NULL, " +
+                "\"Platform\" TEXT NULL, " +
+                "\"UpdatedAt\" TEXT NOT NULL);");
         }
         catch { /* table already exists */ }
     }
