@@ -86,7 +86,7 @@ public class AiController : ControllerBase
         try { action = JsonDocument.Parse(ExtractJson(raw!)).RootElement; }
         catch { return Ok(new AiResult(true, raw!.Trim(), used, false)); }
 
-        var (reply, changed, nav) = await Execute(action, employees, projects, dto.ByEmpId);
+        var (reply, changed, nav) = await Execute(action, employees, projects, dto.ByEmpId, dto.NowIso);
         return Ok(new AiResult(true, reply, used, changed, nav));
     }
 
@@ -112,17 +112,17 @@ public class AiController : ControllerBase
         sb.AppendLine($"Employees: {empList}");
         sb.AppendLine($"Projects: {projList}");
         sb.AppendLine("Match nicknames/first names to a real employee name from the list. Dates: yyyy-MM-dd. Date-times: yyyy-MM-ddTHH:mm.");
-        sb.AppendLine("IMPORTANT rules:");
-        sb.AppendLine("- If a create/assign request does NOT clearly name WHO to assign it to, DO NOT guess — return {\"action\":\"ask\",\"reply\":\"Who should I assign this task to?\"}.");
-        sb.AppendLine("- If the user gives a DURATION (e.g. \"2 hour\", \"30 min\", \"90 minutes\") for a task, set startTime = the current date-time above and endTime = current date-time + that duration. Compute it yourself.");
-        sb.AppendLine("- Use the earlier conversation to fill missing details (e.g. the user answers a question you asked).");
+        sb.AppendLine("IMPORTANT rules (all questions must be in standard English):");
+        sb.AppendLine("- CREATING A TASK only requires a title and an assignee. If the assignee is missing, return {\"action\":\"ask\",\"reply\":\"Who should I assign this task to?\"}. Do NOT ask about project, priority, date or time — leave them null unless the user actually gave them; the system fills sensible defaults (project: none, priority: Medium, due: today, time: a 30-minute slot from now).");
+        sb.AppendLine("- If the user DID give a duration (\"2 hour\", \"30 min\"), set startTime = the current date-time above and endTime = current + that duration.");
+        sb.AppendLine("- Use the earlier conversation to fill details the user already gave or answered.");
         sb.AppendLine("Choose ONE action:");
         sb.AppendLine("- Create/assign a task: {\"action\":\"create_task\",\"title\":\"...\",\"assignee\":\"<name>\",\"priority\":\"Medium\",\"status\":\"ToDo\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"project\":null}");
-        sb.AppendLine("- Change ONE task (time/date/status/priority): {\"action\":\"change_task\",\"taskTitle\":\"...\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"status\":null,\"priority\":null}");
+        sb.AppendLine("- Change ONE task (time/date/status/priority/project): {\"action\":\"change_task\",\"taskTitle\":\"...\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"status\":null,\"priority\":null,\"project\":null}");
         sb.AppendLine("- Bulk move tasks (e.g. \"move all of Amit's ToDo tasks to Done\"): {\"action\":\"bulk_change\",\"assignee\":null,\"project\":null,\"fromStatus\":null,\"toStatus\":\"Done\"}");
-        sb.AppendLine("- Count tasks: {\"action\":\"count_tasks\",\"assignee\":null,\"status\":null}");
+        sb.AppendLine("- Count tasks (e.g. \"how many Low priority tasks\"): {\"action\":\"count_tasks\",\"assignee\":null,\"status\":null,\"priority\":null}");
         sb.AppendLine("- Progress percent: {\"action\":\"progress\",\"assignee\":null,\"project\":null}");
-        sb.AppendLine("- List tasks: {\"action\":\"list_tasks\",\"assignee\":null,\"status\":null,\"project\":null}");
+        sb.AppendLine("- List tasks: {\"action\":\"list_tasks\",\"assignee\":null,\"status\":null,\"project\":null,\"priority\":null,\"noProject\":false,\"noAssignee\":false,\"overdue\":false}  — set noProject=true for tasks with no project, noAssignee=true for unassigned tasks, overdue=true for tasks past their due date and not Done.");
         sb.AppendLine("- Who works on a project: {\"action\":\"project_members\",\"project\":null}");
         sb.AppendLine("- Add a comment to a task: {\"action\":\"add_comment\",\"taskTitle\":\"...\",\"comment\":\"...\"}");
         sb.AppendLine("- Open/show an app page: {\"action\":\"navigate\",\"page\":\"<key>\"}  where key is one of: dashboard, kiosk, employees, idcard, daily, report, holidays, leaves, tasks, projects, salary, settings, permissions.");
@@ -192,17 +192,18 @@ public class AiController : ControllerBase
 
     // ===== Action execution =====
     private async Task<(string reply, bool changed, string? nav)> Execute(
-        JsonElement a, List<Employee> emps, List<Project> projects, int byEmpId)
+        JsonElement a, List<Employee> emps, List<Project> projects, int byEmpId, string? nowIso)
     {
         var action = Str(a, "action")?.ToLowerInvariant() ?? "chat";
         switch (action)
         {
-            case "create_task": { var (r, c) = await CreateTask(a, emps, projects, byEmpId); return (r, c, null); }
-            case "change_task": { var (r, c) = await ChangeTask(a); return (r, c, null); }
+            // Creating a task jumps the user to the Tasks board so they see it.
+            case "create_task": { var (r, c) = await CreateTask(a, emps, projects, byEmpId, nowIso); return (r, c, c ? "tasks" : null); }
+            case "change_task": { var (r, c) = await ChangeTask(a, projects); return (r, c, null); }
             case "bulk_change": { var (r, c) = await BulkChange(a, emps, projects); return (r, c, null); }
             case "count_tasks": { var (r, c) = await CountTasks(a, emps); return (r, c, null); }
             case "progress": { var (r, c) = await Progress(a, emps, projects); return (r, c, null); }
-            case "list_tasks": { var (r, c) = await ListTasks(a, emps, projects); return (r, c, null); }
+            case "list_tasks": { var (r, c) = await ListTasks(a, emps, projects, nowIso); return (r, c, null); }
             case "project_members": { var (r, c) = await ProjectMembers(a, projects); return (r, c, null); }
             case "add_comment": { var (r, c) = await AddComment(a, emps, byEmpId); return (r, c, null); }
             case "navigate":
@@ -217,7 +218,11 @@ public class AiController : ControllerBase
         }
     }
 
-    private async Task<(string, bool)> CreateTask(JsonElement a, List<Employee> emps, List<Project> projects, int byEmpId)
+    // The current date-time from the client (fallback: server UTC).
+    private static DateTime NowOf(string? nowIso) =>
+        DateTime.TryParse(nowIso, out var d) ? d : DateTime.UtcNow;
+
+    private async Task<(string, bool)> CreateTask(JsonElement a, List<Employee> emps, List<Project> projects, int byEmpId, string? nowIso)
     {
         var title = Str(a, "title");
         if (string.IsNullOrWhiteSpace(title)) return ("What should the task be called?", false);
@@ -225,9 +230,15 @@ public class AiController : ControllerBase
         if (string.IsNullOrWhiteSpace(assigneeName)) return ("Who should I assign this task to?", false);
         var assignee = MatchEmployee(assigneeName, emps);
         if (assignee == null) return ($"I couldn't find an employee named \"{assigneeName}\". Please give the correct name.", false);
-        var project = MatchProject(Str(a, "project"), projects);
+        var project = MatchProject(Str(a, "project"), projects); // null = update later
         var status = ValidStatuses.Contains(Str(a, "status")) ? Str(a, "status")! : "ToDo";
-        var priority = ValidPriorities.Contains(Str(a, "priority")) ? Str(a, "priority")! : "Medium";
+        // Defaults when the user didn't say: priority Low, due today, a 30-min slot from now.
+        var priority = ValidPriorities.Contains(Str(a, "priority")) ? Str(a, "priority")! : "Low";
+        var now = NowOf(nowIso);
+        var due = Str(a, "dueDate") ?? now.ToString("yyyy-MM-dd");
+        var start = Str(a, "startTime") ?? now.ToString("yyyy-MM-ddTHH:mm");
+        var end = Str(a, "endTime")
+                  ?? (DateTime.TryParse(start, out var s) ? s.AddMinutes(30) : now.AddMinutes(30)).ToString("yyyy-MM-ddTHH:mm");
         var by = byEmpId > 0 ? byEmpId : assignee.Id;
 
         var t = new TaskItem
@@ -237,21 +248,20 @@ public class AiController : ControllerBase
             AssignedById = by,
             Status = status,
             Priority = priority,
-            DueDate = Str(a, "dueDate"),
-            StartTime = Str(a, "startTime"),
-            EndTime = Str(a, "endTime"),
+            DueDate = due,
+            StartTime = start,
+            EndTime = end,
             ProjectId = project?.Id,
             CreatedAt = DateTime.UtcNow,
         };
         _db.Tasks.Add(t);
         await _db.SaveChangesAsync();
-        var extra = new List<string> { priority, status };
-        if (t.DueDate != null) extra.Add($"due {t.DueDate}");
+        var extra = new List<string> { priority, $"due {due}", $"{start[11..]}–{end[11..]}" };
         if (project != null) extra.Add(project.Name);
         return ($"✅ Task \"{title}\" assigned to {assignee.Name} ({string.Join(", ", extra)}).", true);
     }
 
-    private async Task<(string, bool)> ChangeTask(JsonElement a)
+    private async Task<(string, bool)> ChangeTask(JsonElement a, List<Project> projects)
     {
         var title = Str(a, "taskTitle");
         if (string.IsNullOrWhiteSpace(title)) return ("Which task should I change?", false);
@@ -261,6 +271,7 @@ public class AiController : ControllerBase
         if (t == null) return ($"No task matching \"{title}\" found.", false);
 
         var changes = new List<string>();
+        if (MatchProject(Str(a, "project"), projects) is Project pr) { t.ProjectId = pr.Id; changes.Add($"project {pr.Name}"); }
         if (Str(a, "dueDate") is string dd && dd.Length > 0) { t.DueDate = dd; changes.Add($"due {dd}"); }
         if (Str(a, "startTime") is string st && st.Length > 0) { t.StartTime = st; changes.Add($"start {st}"); }
         if (Str(a, "endTime") is string et && et.Length > 0) { t.EndTime = et; changes.Add($"end {et}"); }
@@ -321,12 +332,17 @@ public class AiController : ControllerBase
     {
         var emp = MatchEmployee(Str(a, "assignee"), emps);
         var status = ValidStatuses.Contains(Str(a, "status")) ? Str(a, "status") : null;
+        var priority = ValidPriorities.Contains(Str(a, "priority")) ? Str(a, "priority") : null;
         var q = _db.Tasks.AsQueryable();
         if (emp != null) q = q.Where(t => t.AssigneeId == emp.Id);
         if (status != null) q = q.Where(t => t.Status == status);
+        if (priority != null) q = q.Where(t => t.Priority == priority);
         var n = await q.CountAsync();
         var who = emp != null ? emp.Name : "everyone";
-        var where = status != null ? $" in {status}" : "";
+        var parts = new List<string>();
+        if (priority != null) parts.Add($"{priority} priority");
+        if (status != null) parts.Add(status!);
+        var where = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
         return ($"{who} has {n} task(s){where}.", false);
     }
 
@@ -345,18 +361,33 @@ public class AiController : ControllerBase
         return ($"{scope} progress: {done}/{total} done ({pct}%).", false);
     }
 
-    private async Task<(string, bool)> ListTasks(JsonElement a, List<Employee> emps, List<Project> projects)
+    private async Task<(string, bool)> ListTasks(JsonElement a, List<Employee> emps, List<Project> projects, string? nowIso)
     {
         var emp = MatchEmployee(Str(a, "assignee"), emps);
         var proj = MatchProject(Str(a, "project"), projects);
         var status = ValidStatuses.Contains(Str(a, "status")) ? Str(a, "status") : null;
-        var q = _db.Tasks.AsQueryable();
+        var priority = ValidPriorities.Contains(Str(a, "priority")) ? Str(a, "priority") : null;
+        var q = _db.Tasks.AsNoTracking().Include(t => t.Assignee).AsQueryable();
         if (emp != null) q = q.Where(t => t.AssigneeId == emp.Id);
         if (proj != null) q = q.Where(t => t.ProjectId == proj.Id);
         if (status != null) q = q.Where(t => t.Status == status);
-        var list = await q.OrderByDescending(t => t.Id).Take(15).ToListAsync();
-        if (list.Count == 0) return ("No matching tasks.", false);
-        var lines = list.Select(t => $"• {t.Title} [{t.Status}]{(t.DueDate != null ? $" · due {t.DueDate}" : "")}");
+        if (priority != null) q = q.Where(t => t.Priority == priority);
+        if (Bool(a, "noProject")) q = q.Where(t => t.ProjectId == null);
+        if (Bool(a, "overdue"))
+        {
+            var today = NowOf(nowIso).ToString("yyyy-MM-dd");
+            q = q.Where(t => t.DueDate != null && string.Compare(t.DueDate, today) < 0 && t.Status != "Done");
+        }
+        var list = await q.OrderByDescending(t => t.Id).Take(60).ToListAsync();
+        if (Bool(a, "noAssignee"))
+        {
+            var ids = emps.Select(e => e.Id).ToHashSet();
+            list = list.Where(t => !ids.Contains(t.AssigneeId)).ToList();
+        }
+        list = list.Take(20).ToList();
+        if (list.Count == 0) return ("No matching tasks found.", false);
+        var lines = list.Select(t =>
+            $"• {t.Title} [{t.Status}] — {t.Assignee?.Name ?? "unassigned"}{(t.DueDate != null ? $" · due {t.DueDate}" : "")}");
         return ($"{list.Count} task(s):\n{string.Join("\n", lines)}", false);
     }
 
@@ -401,6 +432,14 @@ public class AiController : ControllerBase
         if (v.ValueKind == JsonValueKind.String) { var s = v.GetString(); return string.IsNullOrWhiteSpace(s) || s == "null" ? null : s; }
         if (v.ValueKind == JsonValueKind.Number) return v.ToString();
         return null;
+    }
+
+    private static bool Bool(JsonElement e, string prop)
+    {
+        if (!e.TryGetProperty(prop, out var v)) return false;
+        if (v.ValueKind == JsonValueKind.True) return true;
+        if (v.ValueKind == JsonValueKind.String) return v.GetString()?.ToLowerInvariant() is "true" or "yes" or "1";
+        return false;
     }
 
     private static string ExtractJson(string s)
