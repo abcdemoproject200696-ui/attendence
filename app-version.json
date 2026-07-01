@@ -1,6 +1,6 @@
 {
-  "versionCode": 4025,
-  "versionName": "1.5.0",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.5.0.apk",
-  "notes": "Smarter AI Assistant (now on the Dashboard and every page's top bar): it asks for missing details, remembers the conversation, turns durations into start/end times, does single AND bulk task changes, adds comments, and can open any app page for you."
+  "versionCode": 4026,
+  "versionName": "1.6.0",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.6.0.apk",
+  "notes": "AI assistant: creating a task only asks for the assignee (and project) and fills smart defaults (Low priority, today's date, a 30-minute slot from now), then jumps to the Tasks board. It can change a task's project, answer priority/overdue/no-project/unassigned questions, and — when you speak a command — it now speaks its reply back."
 }

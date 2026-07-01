@@ -113,11 +113,11 @@ public class AiController : ControllerBase
         sb.AppendLine($"Projects: {projList}");
         sb.AppendLine("Match nicknames/first names to a real employee name from the list. Dates: yyyy-MM-dd. Date-times: yyyy-MM-ddTHH:mm.");
         sb.AppendLine("IMPORTANT rules (all questions must be in standard English):");
-        sb.AppendLine("- CREATING A TASK only requires a title and an assignee. If the assignee is missing, return {\"action\":\"ask\",\"reply\":\"Who should I assign this task to?\"}. Do NOT ask about project, priority, date or time — leave them null unless the user actually gave them; the system fills sensible defaults (project: none, priority: Medium, due: today, time: a 30-minute slot from now).");
+        sb.AppendLine("- CREATING A TASK only requires a title and an assignee. If the assignee is missing, return {\"action\":\"ask\",\"reply\":\"Who should I assign this task to?\"}. Do NOT ask about project, priority, date or time — leave them null unless the user actually gave them; the system fills sensible defaults (project: none, priority: Low, due: today, time: a 30-minute slot from now).");
         sb.AppendLine("- If the user DID give a duration (\"2 hour\", \"30 min\"), set startTime = the current date-time above and endTime = current + that duration.");
         sb.AppendLine("- Use the earlier conversation to fill details the user already gave or answered.");
         sb.AppendLine("Choose ONE action:");
-        sb.AppendLine("- Create/assign a task: {\"action\":\"create_task\",\"title\":\"...\",\"assignee\":\"<name>\",\"priority\":\"Medium\",\"status\":\"ToDo\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"project\":null}");
+        sb.AppendLine("- Create/assign a task: {\"action\":\"create_task\",\"title\":\"...\",\"assignee\":\"<name>\",\"priority\":null,\"status\":\"ToDo\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"project\":null}  (leave priority/dueDate/startTime/endTime/project null unless the user gave them)");
         sb.AppendLine("- Change ONE task (time/date/status/priority/project): {\"action\":\"change_task\",\"taskTitle\":\"...\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"status\":null,\"priority\":null,\"project\":null}");
         sb.AppendLine("- Bulk move tasks (e.g. \"move all of Amit's ToDo tasks to Done\"): {\"action\":\"bulk_change\",\"assignee\":null,\"project\":null,\"fromStatus\":null,\"toStatus\":\"Done\"}");
         sb.AppendLine("- Count tasks (e.g. \"how many Low priority tasks\"): {\"action\":\"count_tasks\",\"assignee\":null,\"status\":null,\"priority\":null}");
