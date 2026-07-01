@@ -1,6 +1,6 @@
 {
-  "versionCode": 4024,
-  "versionName": "1.4.0",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.4.0.apk",
-  "notes": "New AI Assistant (drawer): type or speak a command to create/assign tasks, change times, and ask about counts, progress %, and who works on a project. Powered by free Gemini + Groq with automatic fallback."
+  "versionCode": 4025,
+  "versionName": "1.5.0",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.5.0.apk",
+  "notes": "Smarter AI Assistant (now on the Dashboard and every page's top bar): it asks for missing details, remembers the conversation, turns durations into start/end times, does single AND bulk task changes, adds comments, and can open any app page for you."
 }
