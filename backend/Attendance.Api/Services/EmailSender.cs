@@ -1,5 +1,7 @@
 using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 
 namespace Attendance.Api.Services;
 
@@ -82,34 +84,35 @@ public class EmailSender
 
         var user = Env("SMTP_USER")!;
         var pass = Env("SMTP_PASS")!;
-        var host = Env("SMTP_HOST") ?? "smtp.gmail.com";
+        var host = (Env("SMTP_HOST") ?? "smtp.gmail.com").Trim();
         var port = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
-        var from = Env("SMTP_FROM") ?? user;
+        var from = (Env("SMTP_FROM") ?? user).Trim();
         var fromName = Env("SMTP_FROM_NAME") ?? "Attendance";
 
         try
         {
-            using var msg = new MailMessage
-            {
-                From = new MailAddress(from, fromName),
-                Subject = subject,
-                Body = htmlBody,
-                IsBodyHtml = true,
-            };
-            msg.To.Add(toEmail);
+            var msg = new MimeMessage();
+            msg.From.Add(new MailboxAddress(fromName, from));
+            msg.To.Add(MailboxAddress.Parse(toEmail));
+            msg.Subject = subject;
+            msg.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
-            using var client = new SmtpClient(host, port)
-            {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(user, pass),
-            };
-            await client.SendMailAsync(msg);
+            // Pick the TLS mode by port: 465 = implicit SSL, otherwise STARTTLS.
+            // MailKit handles both correctly (System.Net.Mail could not do 465).
+            var security = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
+
+            using var client = new SmtpClient { Timeout = 20000 }; // 20s — fail fast, no long hang
+            await client.ConnectAsync(host, port, security);
+            await client.AuthenticateAsync(user, pass);
+            await client.SendAsync(msg);
+            await client.DisconnectAsync(true);
             _log.LogInformation("Email sent to {To}: {Subject}", toEmail, subject);
             return true;
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Email send failed to {To}: {Subject}", toEmail, subject);
+            _log.LogWarning(ex, "Email send failed to {To} via {Host}:{Port}: {Subject}",
+                toEmail, host, port, subject);
             return false;
         }
     }

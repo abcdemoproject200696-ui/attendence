@@ -1,6 +1,6 @@
 {
-  "versionCode": 4026,
-  "versionName": "1.6.0",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.6.0.apk",
-  "notes": "AI assistant: creating a task only asks for the assignee (and project) and fills smart defaults (Low priority, today's date, a 30-minute slot from now), then jumps to the Tasks board. It can change a task's project, answer priority/overdue/no-project/unassigned questions, and — when you speak a command — it now speaks its reply back."
+  "versionCode": 4027,
+  "versionName": "1.7.0",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.0.apk",
+  "notes": "Email + push notifications: when a task is assigned, the assignee now gets a branded email and a phone push notification (even with the screen off or the app closed). New sign-ups can be verified with an email OTP (admin toggles both in Settings). Inactive employees are never notified. Plus a colourful new sign-up success screen."
 }
