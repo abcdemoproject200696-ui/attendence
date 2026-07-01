@@ -39,27 +39,6 @@ public class AiController : ControllerBase
         groq = !string.IsNullOrWhiteSpace(Env("GROQ_API_KEY")),
     });
 
-    // Temporary diagnostic: calls Gemini with a trivial prompt and returns the raw
-    // HTTP status + response body so we can see WHY it fails (never returns the key).
-    [HttpGet("diag")]
-    public async Task<ActionResult<object>> Diag()
-    {
-        var key = Env("GEMINI_API_KEY");
-        if (string.IsNullOrWhiteSpace(key)) return Ok(new { error = "GEMINI_API_KEY not set on server" });
-        var body = JsonSerializer.Serialize(new { contents = new[] { new { parts = new[] { new { text = "say hi" } } } } });
-        var results = new List<object>();
-        foreach (var model in GeminiModels)
-        {
-            try
-            {
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}";
-                var res = await _http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
-                results.Add(new { model, status = (int)res.StatusCode });
-            }
-            catch (Exception e) { results.Add(new { model, error = e.Message }); }
-        }
-        return Ok(new { keyLen = key.Length, models = results });
-    }
 
     [HttpPost("command")]
     public async Task<ActionResult<AiResult>> Command(AiCommandDto dto)
