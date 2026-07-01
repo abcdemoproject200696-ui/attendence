@@ -12,9 +12,20 @@ public class AiCommandDto
     public string Text { get; set; } = string.Empty;
     public string Provider { get; set; } = "gemini"; // "gemini" | "groq"
     public int ByEmpId { get; set; }
+    // Client's current local date-time "yyyy-MM-ddTHH:mm" — lets the AI turn a
+    // duration ("2 hour task") into concrete start/end times off the user's clock.
+    public string? NowIso { get; set; }
+    // Recent conversation (oldest first) so the AI can answer follow-ups like a chat.
+    public List<AiMsg>? History { get; set; }
 }
 
-public record AiResult(bool Ok, string Reply, string Provider, bool Changed);
+public class AiMsg
+{
+    public string Role { get; set; } = "user"; // "user" | "ai"
+    public string Text { get; set; } = string.Empty;
+}
+
+public record AiResult(bool Ok, string Reply, string Provider, bool Changed, string? Nav = null);
 
 // Natural-language task assistant. Takes a user's request, asks an LLM (Gemini or
 // Groq, with automatic fallback) to turn it into a structured action, then runs
@@ -48,7 +59,7 @@ public class AiController : ControllerBase
 
         var employees = await _db.Employees.AsNoTracking().Include(e => e.Role).ToListAsync();
         var projects = await _db.Projects.AsNoTracking().ToListAsync();
-        var prompt = BuildPrompt(dto.Text, employees, projects);
+        var prompt = BuildPrompt(dto.Text, employees, projects, dto.NowIso, dto.History);
 
         // Chosen provider first, then fall back to the other (covers quota/limit).
         var order = string.Equals(dto.Provider, "groq", StringComparison.OrdinalIgnoreCase)
@@ -75,31 +86,55 @@ public class AiController : ControllerBase
         try { action = JsonDocument.Parse(ExtractJson(raw!)).RootElement; }
         catch { return Ok(new AiResult(true, raw!.Trim(), used, false)); }
 
-        var (reply, changed) = await Execute(action, employees, projects, dto.ByEmpId);
-        return Ok(new AiResult(true, reply, used, changed));
+        var (reply, changed, nav) = await Execute(action, employees, projects, dto.ByEmpId);
+        return Ok(new AiResult(true, reply, used, changed, nav));
     }
 
-    // ===== Prompt =====
-    private static string BuildPrompt(string text, List<Employee> emps, List<Project> projects)
+    // App pages the assistant can open (key -> friendly name). Mirrors the home menu.
+    private static readonly Dictionary<string, string> Pages = new()
     {
-        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        ["dashboard"] = "Dashboard", ["kiosk"] = "Attendance Scanner", ["employees"] = "Employees",
+        ["idcard"] = "ID Card", ["daily"] = "Daily Attendance", ["report"] = "Monthly Report",
+        ["holidays"] = "Holidays", ["leaves"] = "Leaves", ["tasks"] = "Tasks", ["projects"] = "Projects",
+        ["salary"] = "Salary", ["settings"] = "Settings", ["permissions"] = "Permissions",
+    };
+
+    // ===== Prompt =====
+    private static string BuildPrompt(string text, List<Employee> emps, List<Project> projects, string? nowIso, List<AiMsg>? history)
+    {
+        var now = string.IsNullOrWhiteSpace(nowIso) ? DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm") : nowIso!;
+        var today = now.Length >= 10 ? now[..10] : now;
         var empList = string.Join(", ", emps.Select(e => $"{e.Name} ({e.Code})"));
         var projList = projects.Count == 0 ? "(none)" : string.Join(", ", projects.Select(p => p.Name));
         var sb = new StringBuilder();
-        sb.AppendLine("You are a task-management assistant for a Kanban app. Convert the user's request into ONE JSON action. Reply with ONLY a JSON object, no prose, no markdown.");
-        sb.AppendLine($"Today is {today} (UTC). Statuses: ToDo, InProgress, Review, Done. Priorities: Low, Medium, High, Urgent.");
+        sb.AppendLine("You are a friendly task-management assistant for a Kanban app. Understand English, Hindi and Hinglish input, but ALWAYS write replies in clear, standard English. Convert the LATEST user message into ONE JSON action. Reply with ONLY a JSON object — no prose, no markdown.");
+        sb.AppendLine($"Current date-time is {now}. Today is {today}. Statuses: ToDo, InProgress, Review, Done. Priorities: Low, Medium, High, Urgent.");
         sb.AppendLine($"Employees: {empList}");
         sb.AppendLine($"Projects: {projList}");
-        sb.AppendLine("Use the employee's real name from the list (match nicknames/first names to it). Dates as yyyy-MM-dd, date-times as yyyy-MM-ddTHH:mm.");
-        sb.AppendLine("Choose ONE action and return its JSON:");
+        sb.AppendLine("Match nicknames/first names to a real employee name from the list. Dates: yyyy-MM-dd. Date-times: yyyy-MM-ddTHH:mm.");
+        sb.AppendLine("IMPORTANT rules:");
+        sb.AppendLine("- If a create/assign request does NOT clearly name WHO to assign it to, DO NOT guess — return {\"action\":\"ask\",\"reply\":\"Who should I assign this task to?\"}.");
+        sb.AppendLine("- If the user gives a DURATION (e.g. \"2 hour\", \"30 min\", \"90 minutes\") for a task, set startTime = the current date-time above and endTime = current date-time + that duration. Compute it yourself.");
+        sb.AppendLine("- Use the earlier conversation to fill missing details (e.g. the user answers a question you asked).");
+        sb.AppendLine("Choose ONE action:");
         sb.AppendLine("- Create/assign a task: {\"action\":\"create_task\",\"title\":\"...\",\"assignee\":\"<name>\",\"priority\":\"Medium\",\"status\":\"ToDo\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"project\":null}");
-        sb.AppendLine("- Change a task's time/date/status: {\"action\":\"change_task\",\"taskTitle\":\"...\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"status\":null,\"priority\":null}");
-        sb.AppendLine("- Count tasks: {\"action\":\"count_tasks\",\"assignee\":null,\"status\":null}  (null = all)");
-        sb.AppendLine("- Progress percent (done vs total): {\"action\":\"progress\",\"assignee\":null,\"project\":null}");
+        sb.AppendLine("- Change ONE task (time/date/status/priority): {\"action\":\"change_task\",\"taskTitle\":\"...\",\"dueDate\":null,\"startTime\":null,\"endTime\":null,\"status\":null,\"priority\":null}");
+        sb.AppendLine("- Bulk move tasks (e.g. \"move all of Amit's ToDo tasks to Done\"): {\"action\":\"bulk_change\",\"assignee\":null,\"project\":null,\"fromStatus\":null,\"toStatus\":\"Done\"}");
+        sb.AppendLine("- Count tasks: {\"action\":\"count_tasks\",\"assignee\":null,\"status\":null}");
+        sb.AppendLine("- Progress percent: {\"action\":\"progress\",\"assignee\":null,\"project\":null}");
         sb.AppendLine("- List tasks: {\"action\":\"list_tasks\",\"assignee\":null,\"status\":null,\"project\":null}");
-        sb.AppendLine("- Who works on a project: {\"action\":\"project_members\",\"project\":null}  (null = all projects)");
-        sb.AppendLine("- Anything else / a question you can answer directly: {\"action\":\"chat\",\"reply\":\"...\"}");
-        sb.AppendLine($"User request: {text}");
+        sb.AppendLine("- Who works on a project: {\"action\":\"project_members\",\"project\":null}");
+        sb.AppendLine("- Add a comment to a task: {\"action\":\"add_comment\",\"taskTitle\":\"...\",\"comment\":\"...\"}");
+        sb.AppendLine("- Open/show an app page: {\"action\":\"navigate\",\"page\":\"<key>\"}  where key is one of: dashboard, kiosk, employees, idcard, daily, report, holidays, leaves, tasks, projects, salary, settings, permissions.");
+        sb.AppendLine("- Ask the user for a missing detail: {\"action\":\"ask\",\"reply\":\"<your question>\"}");
+        sb.AppendLine("- Anything else / a direct answer: {\"action\":\"chat\",\"reply\":\"...\"}");
+        if (history != null && history.Count > 0)
+        {
+            sb.AppendLine("Conversation so far (oldest first):");
+            foreach (var m in history.TakeLast(8))
+                sb.AppendLine($"{(m.Role == "ai" ? "Assistant" : "User")}: {m.Text}");
+        }
+        sb.AppendLine($"Latest user message: {text}");
         return sb.ToString();
     }
 
@@ -156,26 +191,29 @@ public class AiController : ControllerBase
     }
 
     // ===== Action execution =====
-    private async Task<(string reply, bool changed)> Execute(
+    private async Task<(string reply, bool changed, string? nav)> Execute(
         JsonElement a, List<Employee> emps, List<Project> projects, int byEmpId)
     {
         var action = Str(a, "action")?.ToLowerInvariant() ?? "chat";
         switch (action)
         {
-            case "create_task":
-                return await CreateTask(a, emps, projects, byEmpId);
-            case "change_task":
-                return await ChangeTask(a);
-            case "count_tasks":
-                return await CountTasks(a, emps);
-            case "progress":
-                return await Progress(a, emps, projects);
-            case "list_tasks":
-                return await ListTasks(a, emps, projects);
-            case "project_members":
-                return await ProjectMembers(a, projects);
+            case "create_task": { var (r, c) = await CreateTask(a, emps, projects, byEmpId); return (r, c, null); }
+            case "change_task": { var (r, c) = await ChangeTask(a); return (r, c, null); }
+            case "bulk_change": { var (r, c) = await BulkChange(a, emps, projects); return (r, c, null); }
+            case "count_tasks": { var (r, c) = await CountTasks(a, emps); return (r, c, null); }
+            case "progress": { var (r, c) = await Progress(a, emps, projects); return (r, c, null); }
+            case "list_tasks": { var (r, c) = await ListTasks(a, emps, projects); return (r, c, null); }
+            case "project_members": { var (r, c) = await ProjectMembers(a, projects); return (r, c, null); }
+            case "add_comment": { var (r, c) = await AddComment(a, emps, byEmpId); return (r, c, null); }
+            case "navigate":
+                var key = (Str(a, "page") ?? "").ToLowerInvariant();
+                return Pages.ContainsKey(key)
+                    ? ($"Opening {Pages[key]}…", false, key)
+                    : ("Which page should I open? (e.g. tasks, dashboard, employees)", false, null);
+            case "ask":
+                return (Str(a, "reply") ?? "Could you give me a bit more detail?", false, null);
             default:
-                return (Str(a, "reply") ?? "Sorry, I couldn't understand that. Try: \"assign a task to <name>\".", false);
+                return (Str(a, "reply") ?? "Sorry, I didn't understand. Try: \"assign a task to <name>\" or \"open tasks page\".", false, null);
         }
     }
 
@@ -183,8 +221,10 @@ public class AiController : ControllerBase
     {
         var title = Str(a, "title");
         if (string.IsNullOrWhiteSpace(title)) return ("What should the task be called?", false);
-        var assignee = MatchEmployee(Str(a, "assignee"), emps);
-        if (assignee == null) return ($"I couldn't find an employee called \"{Str(a, "assignee")}\".", false);
+        var assigneeName = Str(a, "assignee");
+        if (string.IsNullOrWhiteSpace(assigneeName)) return ("Who should I assign this task to?", false);
+        var assignee = MatchEmployee(assigneeName, emps);
+        if (assignee == null) return ($"I couldn't find an employee named \"{assigneeName}\". Please give the correct name.", false);
         var project = MatchProject(Str(a, "project"), projects);
         var status = ValidStatuses.Contains(Str(a, "status")) ? Str(a, "status")! : "ToDo";
         var priority = ValidPriorities.Contains(Str(a, "priority")) ? Str(a, "priority")! : "Medium";
@@ -229,6 +269,52 @@ public class AiController : ControllerBase
         if (changes.Count == 0) return ("Nothing to change — tell me the new time/status.", false);
         await _db.SaveChangesAsync();
         return ($"✅ Updated \"{t.Title}\": {string.Join(", ", changes)}.", true);
+    }
+
+    // Add a text comment to a task (stored as Quill Delta so the app renders it).
+    private async Task<(string, bool)> AddComment(JsonElement a, List<Employee> emps, int byEmpId)
+    {
+        var title = Str(a, "taskTitle");
+        var text = Str(a, "comment");
+        if (string.IsNullOrWhiteSpace(title)) return ("Which task should I comment on?", false);
+        if (string.IsNullOrWhiteSpace(text)) return ("What should the comment say?", false);
+        var all = await _db.Tasks.OrderByDescending(t => t.Id).ToListAsync();
+        var t = all.FirstOrDefault(x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase))
+                ?? all.FirstOrDefault(x => x.Title.Contains(title!, StringComparison.OrdinalIgnoreCase));
+        if (t == null) return ($"I couldn't find a task named \"{title}\".", false);
+        var author = emps.FirstOrDefault(e => e.Id == byEmpId);
+        var body = JsonSerializer.Serialize(new object[] { new { insert = text + "\n" } });
+        _db.TaskComments.Add(new TaskComment
+        {
+            TaskId = t.Id,
+            AuthorId = byEmpId,
+            AuthorName = author?.Name ?? $"#{byEmpId}",
+            Body = body,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        return ($"✅ Comment added to \"{t.Title}\".", true);
+    }
+
+    // Bulk move: e.g. "move all of Amit's ToDo tasks to Done".
+    private async Task<(string, bool)> BulkChange(JsonElement a, List<Employee> emps, List<Project> projects)
+    {
+        var to = Str(a, "toStatus");
+        if (!ValidStatuses.Contains(to)) return ("Which status should I move them to? (ToDo/InProgress/Review/Done)", false);
+        var emp = MatchEmployee(Str(a, "assignee"), emps);
+        var proj = MatchProject(Str(a, "project"), projects);
+        var from = ValidStatuses.Contains(Str(a, "fromStatus")) ? Str(a, "fromStatus") : null;
+        var q = _db.Tasks.AsQueryable();
+        if (emp != null) q = q.Where(t => t.AssigneeId == emp.Id);
+        if (proj != null) q = q.Where(t => t.ProjectId == proj.Id);
+        if (from != null) q = q.Where(t => t.Status == from);
+        var list = await q.Where(t => t.Status != to).ToListAsync();
+        if (list.Count == 0) return ("No matching tasks found to move.", false);
+        foreach (var t in list) t.Status = to!;
+        await _db.SaveChangesAsync();
+        var who = emp != null ? $"{emp.Name}'s " : "";
+        var fromTxt = from != null ? $"{from} " : "";
+        return ($"✅ Moved {list.Count} {who}{fromTxt}task(s) to {to}.", true);
     }
 
     private async Task<(string, bool)> CountTasks(JsonElement a, List<Employee> emps)
