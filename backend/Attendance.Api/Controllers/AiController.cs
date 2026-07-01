@@ -46,15 +46,19 @@ public class AiController : ControllerBase
     {
         var key = Env("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(key)) return Ok(new { error = "GEMINI_API_KEY not set on server" });
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}";
         var body = JsonSerializer.Serialize(new { contents = new[] { new { parts = new[] { new { text = "say hi" } } } } });
-        try
+        var results = new List<object>();
+        foreach (var model in GeminiModels)
         {
-            var res = await _http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
-            var text = await res.Content.ReadAsStringAsync();
-            return Ok(new { keyPrefix = key.Length > 6 ? key[..6] : key, keyLen = key.Length, status = (int)res.StatusCode, body = text.Length > 600 ? text[..600] : text });
+            try
+            {
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}";
+                var res = await _http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
+                results.Add(new { model, status = (int)res.StatusCode });
+            }
+            catch (Exception e) { results.Add(new { model, error = e.Message }); }
         }
-        catch (Exception e) { return Ok(new { error = e.Message }); }
+        return Ok(new { keyLen = key.Length, models = results });
     }
 
     [HttpPost("command")]
@@ -121,21 +125,36 @@ public class AiController : ControllerBase
     }
 
     // ===== Provider calls (return the model's text, or null on failure) =====
+    // Free-tier model quota varies by project/region (gemini-2.0-flash can be 0),
+    // so try several in order and use the first that has quota.
+    private static readonly string[] GeminiModels =
+        { "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-flash-latest" };
+
     private static async Task<string?> CallGemini(string prompt)
     {
         var key = Env("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(key)) return null;
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}";
         var body = JsonSerializer.Serialize(new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
             generationConfig = new { responseMimeType = "application/json", temperature = 0.2 }
         });
-        var res = await _http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
-        if (!res.IsSuccessStatusCode) throw new Exception($"gemini {(int)res.StatusCode}");
-        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-        return doc.RootElement.GetProperty("candidates")[0].GetProperty("content")
-            .GetProperty("parts")[0].GetProperty("text").GetString();
+        Exception? last = null;
+        foreach (var model in GeminiModels)
+        {
+            try
+            {
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}";
+                var res = await _http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
+                if (!res.IsSuccessStatusCode) { last = new Exception($"{model} {(int)res.StatusCode}"); continue; }
+                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+                return doc.RootElement.GetProperty("candidates")[0].GetProperty("content")
+                    .GetProperty("parts")[0].GetProperty("text").GetString();
+            }
+            catch (Exception e) { last = e; }
+        }
+        if (last != null) throw last;
+        return null;
     }
 
     private static async Task<string?> CallGroq(string prompt)
