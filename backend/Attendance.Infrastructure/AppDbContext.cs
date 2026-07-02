@@ -78,7 +78,8 @@ public class AppDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Code).IsRequired();
             e.HasIndex(x => x.Code).IsUnique();
-            e.Property(x => x.Name).IsRequired();
+            // Name is DERIVED from First + Last (no column) — must not be mapped.
+            e.Ignore(x => x.Name);
             e.Property(x => x.MonthlySalary).HasColumnType("decimal(18,2)");
             e.Ignore(x => x.HasFace);
             e.Ignore(x => x.FaceCount);
