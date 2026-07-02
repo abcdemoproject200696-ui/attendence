@@ -1,6 +1,6 @@
 {
-  "versionCode": 4028,
-  "versionName": "1.7.1",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.1.apk",
-  "notes": "Task scheduling made faster: pick a task's due date and the Start and End times now auto-fill onto that date (start = current time, end = +30 min). You can still adjust either time manually."
+  "versionCode": 4029,
+  "versionName": "1.7.2",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.2.apk",
+  "notes": "Employee onboarding upgraded: Add Employee now captures full joining details (designation, date of joining, Aadhaar, PAN, bank account & IFSC, emergency contact and addresses). Admins can switch on manual employee codes (with a custom starting number) in Settings. Task-assigned notifications now open and highlight the exact new task, and notifications work on the web/PC too."
 }
