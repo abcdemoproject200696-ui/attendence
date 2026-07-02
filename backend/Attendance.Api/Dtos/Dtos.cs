@@ -37,7 +37,11 @@ public class RoleInputDto
 // ---------- Employee ----------
 public record EmployeeDto(
     int Id, string Code, string Name, string? FirstName, string? LastName, int RoleId, string RoleName, string? Email, string? Phone,
-    int ShiftId, decimal MonthlySalary, bool IsActive, string? PhotoUrl, string? Gender, string? BloodGroup, string? Dob, bool HasFace, int FaceCount, DateTime CreatedAt);
+    int ShiftId, decimal MonthlySalary, bool IsActive, string? PhotoUrl, string? Gender, string? BloodGroup, string? Dob, bool HasFace, int FaceCount, DateTime CreatedAt,
+    string? Designation, string? Department, string? DateOfJoining,
+    string? Aadhaar, string? Pan, string? UanPf,
+    string? BankAccount, string? Ifsc, string? BankName,
+    string? EmergencyName, string? EmergencyPhone, string? CurrentAddress, string? PermanentAddress);
 
 public class EmployeeInputDto
 {
@@ -57,6 +61,23 @@ public class EmployeeInputDto
     public string? Gender { get; set; }
     public string? BloodGroup { get; set; }
     public string? Dob { get; set; }
+    // ---- Job / onboarding ----
+    public string? Designation { get; set; }
+    public string? Department { get; set; }
+    public string? DateOfJoining { get; set; }
+    // ---- KYC / statutory ----
+    public string? Aadhaar { get; set; }
+    public string? Pan { get; set; }
+    public string? UanPf { get; set; }
+    // ---- Bank ----
+    public string? BankAccount { get; set; }
+    public string? Ifsc { get; set; }
+    public string? BankName { get; set; }
+    // ---- Contact / address ----
+    public string? EmergencyName { get; set; }
+    public string? EmergencyPhone { get; set; }
+    public string? CurrentAddress { get; set; }
+    public string? PermanentAddress { get; set; }
     /// <summary>1..5 face descriptors (each 128-d). When provided, replaces the employee's enrolled faces.</summary>
     public List<List<double>>? FaceDescriptors { get; set; }
     /// <summary>Login password. When non-empty, sets/resets the hash; empty/null on update keeps existing.</summary>
@@ -204,7 +225,7 @@ public class LeaveUpdateDto
 // ---------- App settings ----------
 public record AppSettingDto(
     int Id, double FaceMatchThreshold, bool RequireLiveness, bool VoiceEnabled, bool OvertimePayable,
-    bool HrCanEditAttendance, bool TaskAssignEmail, bool SignupOtpEmail);
+    bool HrCanEditAttendance, bool TaskAssignEmail, bool SignupOtpEmail, bool ManualEmpCode, int EmpCodeStart);
 
 public class AppSettingUpdateDto
 {
@@ -215,6 +236,8 @@ public class AppSettingUpdateDto
     public bool? HrCanEditAttendance { get; set; }
     public bool? TaskAssignEmail { get; set; }
     public bool? SignupOtpEmail { get; set; }
+    public bool? ManualEmpCode { get; set; }
+    public int? EmpCodeStart { get; set; }
 }
 
 // ---------- Monthly report ----------

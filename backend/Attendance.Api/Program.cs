@@ -105,6 +105,27 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"SignupOtpEmail\" boolean NOT NULL DEFAULT FALSE;");
         await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"ManualEmpCode\" boolean NOT NULL DEFAULT FALSE;");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"EmpCodeStart\" integer NOT NULL DEFAULT 1;");
+        // New employee onboarding / KYC / bank / contact columns.
+        foreach (var col in new[] { "Designation", "Department", "DateOfJoining", "Aadhaar",
+            "Pan", "UanPf", "BankAccount", "Ifsc", "BankName", "EmergencyName",
+            "EmergencyPhone", "CurrentAddress", "PermanentAddress" })
+            await db.Database.ExecuteSqlRawAsync(
+                $"ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"{col}\" text;");
+        // Migrate the old single "Name" into First/Last (only where First is blank), then drop it.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"Employees\" SET " +
+                "\"FirstName\" = split_part(\"Name\", ' ', 1), " +
+                "\"LastName\" = NULLIF(substr(\"Name\", length(split_part(\"Name\",' ',1)) + 2), '') " +
+                "WHERE (\"FirstName\" IS NULL OR \"FirstName\" = '') AND \"Name\" IS NOT NULL AND \"Name\" <> '';");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Employees\" DROP COLUMN IF EXISTS \"Name\";");
+        }
+        catch { /* Name already dropped */ }
+        await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"Gender\" text;");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE \"Employees\" ADD COLUMN IF NOT EXISTS \"BloodGroup\" text;");
@@ -217,6 +238,25 @@ using (var scope = app.Services.CreateScope())
                 "ALTER TABLE \"Settings\" ADD COLUMN \"SignupOtpEmail\" INTEGER NOT NULL DEFAULT 0;");
         }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Settings\" ADD COLUMN \"ManualEmpCode\" INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Settings\" ADD COLUMN \"EmpCodeStart\" INTEGER NOT NULL DEFAULT 1;"); } catch { }
+        foreach (var col in new[] { "Designation", "Department", "DateOfJoining", "Aadhaar",
+            "Pan", "UanPf", "BankAccount", "Ifsc", "BankName", "EmergencyName",
+            "EmergencyPhone", "CurrentAddress", "PermanentAddress" })
+        {
+            try { await db.Database.ExecuteSqlRawAsync($"ALTER TABLE \"Employees\" ADD COLUMN \"{col}\" TEXT;"); } catch { }
+        }
+        // Migrate old "Name" into First/Last then drop it (SQLite 3.35+ supports DROP COLUMN).
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"Employees\" SET " +
+                "\"FirstName\" = CASE WHEN instr(\"Name\",' ')>0 THEN substr(\"Name\",1,instr(\"Name\",' ')-1) ELSE \"Name\" END, " +
+                "\"LastName\" = CASE WHEN instr(\"Name\",' ')>0 THEN substr(\"Name\", instr(\"Name\",' ')+1) ELSE NULL END " +
+                "WHERE (\"FirstName\" IS NULL OR \"FirstName\"='') AND \"Name\" IS NOT NULL AND \"Name\"<>'';");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Employees\" DROP COLUMN \"Name\";");
+        }
+        catch { /* Name already migrated/dropped */ }
         try
         {
             await db.Database.ExecuteSqlRawAsync(

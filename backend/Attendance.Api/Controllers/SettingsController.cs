@@ -67,6 +67,8 @@ public class SettingsController : ControllerBase
         if (dto.HrCanEditAttendance.HasValue) settings.HrCanEditAttendance = dto.HrCanEditAttendance.Value;
         if (dto.TaskAssignEmail.HasValue) settings.TaskAssignEmail = dto.TaskAssignEmail.Value;
         if (dto.SignupOtpEmail.HasValue) settings.SignupOtpEmail = dto.SignupOtpEmail.Value;
+        if (dto.ManualEmpCode.HasValue) settings.ManualEmpCode = dto.ManualEmpCode.Value;
+        if (dto.EmpCodeStart.HasValue) settings.EmpCodeStart = dto.EmpCodeStart.Value < 1 ? 1 : dto.EmpCodeStart.Value;
 
         await _db.SaveChangesAsync();
         return Ok(settings.ToDto());

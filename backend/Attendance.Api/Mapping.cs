@@ -18,7 +18,11 @@ public static class Mapping
 
     public static EmployeeDto ToDto(this Employee e) => new(
         e.Id, e.Code, e.Name, e.FirstName, e.LastName, e.RoleId, e.Role?.Name ?? string.Empty, e.Email, e.Phone,
-        e.ShiftId, e.MonthlySalary, e.IsActive, e.PhotoUrl, e.Gender, e.BloodGroup, e.Dob, e.HasFace, e.FaceCount, e.CreatedAt);
+        e.ShiftId, e.MonthlySalary, e.IsActive, e.PhotoUrl, e.Gender, e.BloodGroup, e.Dob, e.HasFace, e.FaceCount, e.CreatedAt,
+        e.Designation, e.Department, e.DateOfJoining,
+        e.Aadhaar, e.Pan, e.UanPf,
+        e.BankAccount, e.Ifsc, e.BankName,
+        e.EmergencyName, e.EmergencyPhone, e.CurrentAddress, e.PermanentAddress);
 
     public static PunchDto ToDto(this AttendancePunch p) => new(
         p.Id, p.EmployeeId, p.Employee?.Code, p.Employee?.Name,
@@ -36,7 +40,7 @@ public static class Mapping
 
     public static AppSettingDto ToDto(this AppSetting s) => new(
         s.Id, s.FaceMatchThreshold, s.RequireLiveness, s.VoiceEnabled, s.OvertimePayable,
-        s.HrCanEditAttendance, s.TaskAssignEmail, s.SignupOtpEmail);
+        s.HrCanEditAttendance, s.TaskAssignEmail, s.SignupOtpEmail, s.ManualEmpCode, s.EmpCodeStart);
 
     public static LeaveDto ToDto(this LeaveRequest l) => new(
         l.Id, l.EmployeeId, l.Employee?.Name, l.FromDate.ToString(DateFmt),

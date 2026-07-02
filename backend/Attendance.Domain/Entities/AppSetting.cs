@@ -35,4 +35,12 @@ public class AppSetting
     /// the user must enter it, and only a matching code completes registration.
     /// When false, signup completes immediately (current behaviour). Needs SMTP.</summary>
     public bool SignupOtpEmail { get; set; }
+
+    /// <summary>When true, the admin types the employee code manually in Add Employee
+    /// (must be unique). When false, the backend auto-generates the next code.</summary>
+    public bool ManualEmpCode { get; set; }
+
+    /// <summary>The number auto-generated codes start from (e.g. 1 → EMP001). Only used
+    /// when ManualEmpCode is false. New code = max(existing, this) + 1.</summary>
+    public int EmpCodeStart { get; set; } = 1;
 }

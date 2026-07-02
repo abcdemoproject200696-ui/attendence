@@ -59,7 +59,8 @@ public class TaskNotifier
                 {
                     var body = string.IsNullOrWhiteSpace(t.Project?.Name) ? t.Title : $"{t.Title} · {t.Project!.Name}";
                     var dead = await _push.SendToTokensAsync(
-                        tokens, "New task assigned", body, new Dictionary<string, string> { ["type"] = "task" });
+                        tokens, "New task assigned", body,
+                        new Dictionary<string, string> { ["type"] = "task", ["taskId"] = t.Id.ToString() });
                     if (dead.Count > 0)
                     {
                         db.DeviceTokens.RemoveRange(db.DeviceTokens.Where(d => dead.Contains(d.Token)));

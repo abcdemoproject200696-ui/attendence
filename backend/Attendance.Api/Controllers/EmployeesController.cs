@@ -110,27 +110,34 @@ public class EmployeesController : ControllerBase
         var faceError = ValidateFaceDescriptors(dto.FaceDescriptors);
         if (faceError is not null) return BadRequest(faceError);
 
-        var name = ResolveName(dto);
-        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+        var (first, last) = SplitNames(dto);
+        if (string.IsNullOrWhiteSpace(first)) return BadRequest("Name is required.");
+
+        var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
 
         string code;
-        if (string.IsNullOrWhiteSpace(dto.Code))
+        if (!string.IsNullOrWhiteSpace(dto.Code))
         {
-            code = await GenerateNextCodeAsync();
-        }
-        else
-        {
+            // Manual code (admin typed it) — must be unique.
             code = dto.Code.Trim().ToUpperInvariant();
             if (await _db.Employees.AnyAsync(e => e.Code.ToUpper() == code))
                 return BadRequest($"Employee code '{code}' already exists.");
+        }
+        else if (settings?.ManualEmpCode == true)
+        {
+            // Manual mode is on but no code was supplied.
+            return BadRequest("Employee code is required (manual code is enabled in Settings).");
+        }
+        else
+        {
+            code = await GenerateNextCodeAsync(settings?.EmpCodeStart ?? 1);
         }
 
         var e = new Employee
         {
             Code = code,
-            Name = name,
-            FirstName = dto.FirstName?.Trim(),
-            LastName = dto.LastName?.Trim(),
+            FirstName = first,
+            LastName = last,
             RoleId = dto.RoleId,
             Email = dto.Email,
             Phone = dto.Phone,
@@ -141,6 +148,19 @@ public class EmployeesController : ControllerBase
             Gender = dto.Gender,
             BloodGroup = dto.BloodGroup,
             Dob = dto.Dob,
+            Designation = dto.Designation,
+            Department = dto.Department,
+            DateOfJoining = dto.DateOfJoining,
+            Aadhaar = dto.Aadhaar,
+            Pan = dto.Pan,
+            UanPf = dto.UanPf,
+            BankAccount = dto.BankAccount,
+            Ifsc = dto.Ifsc,
+            BankName = dto.BankName,
+            EmergencyName = dto.EmergencyName,
+            EmergencyPhone = dto.EmergencyPhone,
+            CurrentAddress = dto.CurrentAddress,
+            PermanentAddress = dto.PermanentAddress,
             FaceDescriptors = dto.FaceDescriptors is { Count: > 0 } ? dto.FaceDescriptors : null,
             PasswordHash = string.IsNullOrEmpty(dto.Password) ? null : PasswordHasher.Hash(dto.Password),
             CreatedAt = DateTime.UtcNow
@@ -157,9 +177,7 @@ public class EmployeesController : ControllerBase
         var e = await _db.Employees.FirstOrDefaultAsync(x => x.Id == id);
         if (e is null) return NotFound();
 
-        var newCode = string.IsNullOrWhiteSpace(dto.Code) ? e.Code : dto.Code.Trim().ToUpperInvariant();
-        if (e.Code != newCode && await _db.Employees.AnyAsync(x => x.Code.ToUpper() == newCode && x.Id != id))
-            return Conflict($"Employee code '{newCode}' already exists.");
+        // The employee code is NEVER changed on edit (kept as-is).
         if (!await _db.Shifts.AnyAsync(s => s.Id == dto.ShiftId))
             return BadRequest($"Shift {dto.ShiftId} does not exist.");
         if (!await _db.Roles.AnyAsync(r => r.Id == dto.RoleId))
@@ -168,18 +186,29 @@ public class EmployeesController : ControllerBase
         var faceError = ValidateFaceDescriptors(dto.FaceDescriptors);
         if (faceError is not null) return BadRequest(faceError);
 
-        var name = ResolveName(dto);
-        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
-        e.Code = newCode;
-        e.Name = name;
-        e.FirstName = dto.FirstName?.Trim();
-        e.LastName = dto.LastName?.Trim();
+        var (first, last) = SplitNames(dto);
+        if (string.IsNullOrWhiteSpace(first)) return BadRequest("Name is required.");
+        e.FirstName = first;
+        e.LastName = last;
         e.RoleId = dto.RoleId;
         e.Email = dto.Email;
         e.Phone = dto.Phone;
         e.ShiftId = dto.ShiftId;
         e.MonthlySalary = dto.MonthlySalary;
         e.IsActive = dto.IsActive;
+        e.Designation = dto.Designation;
+        e.Department = dto.Department;
+        e.DateOfJoining = dto.DateOfJoining;
+        e.Aadhaar = dto.Aadhaar;
+        e.Pan = dto.Pan;
+        e.UanPf = dto.UanPf;
+        e.BankAccount = dto.BankAccount;
+        e.Ifsc = dto.Ifsc;
+        e.BankName = dto.BankName;
+        e.EmergencyName = dto.EmergencyName;
+        e.EmergencyPhone = dto.EmergencyPhone;
+        e.CurrentAddress = dto.CurrentAddress;
+        e.PermanentAddress = dto.PermanentAddress;
         // Provided non-empty => set new photo. Omitted/empty => KEEP the existing
         // enrolment photo. Without this guard, editing anything else (e.g. salary)
         // sent no photoUrl and wiped the picture, forcing a needless re-enrollment.
@@ -240,12 +269,20 @@ public class EmployeesController : ControllerBase
     private const int MaxFaceDescriptorLength = 1024;
     private const int MaxFaceDescriptors = 5;
 
-    /// <summary>Combined display name: "First Last" when First/Last are sent, else the
-    /// legacy single Name field. Keeps the Name column populated for all existing screens.</summary>
-    private static string ResolveName(EmployeeInputDto dto)
+    /// <summary>Resolve First/Last from the DTO. Uses FirstName/LastName when sent;
+    /// otherwise splits the legacy single Name ("Rohan Gupta" → "Rohan","Gupta").</summary>
+    private static (string first, string? last) SplitNames(EmployeeInputDto dto)
     {
-        var combined = $"{dto.FirstName?.Trim()} {dto.LastName?.Trim()}".Trim();
-        return !string.IsNullOrWhiteSpace(combined) ? combined : (dto.Name ?? string.Empty).Trim();
+        var first = dto.FirstName?.Trim();
+        var last = dto.LastName?.Trim();
+        if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(last)
+            && !string.IsNullOrWhiteSpace(dto.Name))
+        {
+            var parts = dto.Name.Trim().Split(' ', 2);
+            first = parts[0];
+            last = parts.Length > 1 ? parts[1] : null;
+        }
+        return (first ?? string.Empty, string.IsNullOrWhiteSpace(last) ? null : last);
     }
 
     private static string? ValidateFaceDescriptors(List<List<double>>? descriptors)
@@ -266,8 +303,9 @@ public class EmployeesController : ControllerBase
         return null;
     }
 
-    /// <summary>Next "EMP00X": max numeric suffix of existing EMP-codes + 1, zero-padded to 3.</summary>
-    private async Task<string> GenerateNextCodeAsync()
+    /// <summary>Next "EMP00X": max numeric suffix of existing EMP-codes + 1, but never
+    /// below <paramref name="start"/> (the admin-set starting number). Zero-padded to 3.</summary>
+    private async Task<string> GenerateNextCodeAsync(int start = 1)
     {
         var codes = await _db.Employees.Select(e => e.Code).ToListAsync();
         var max = 0;
@@ -277,6 +315,7 @@ public class EmployeesController : ControllerBase
             if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n > max)
                 max = n;
         }
-        return $"EMP{(max + 1):D3}";
+        var next = Math.Max(max + 1, start < 1 ? 1 : start);
+        return $"EMP{next:D3}";
     }
 }

@@ -104,9 +104,9 @@ public static class DbSeeder
         {
             db.Employees.AddRange(
                 // EMP001 is the Admin (roleId 1) with known creds admin123 (see CONTRACT.md).
-                new Employee { Code = "EMP001", Name = "Aarav Sharma", RoleId = 1, Email = "aarav@example.com", Phone = "9000000001", ShiftId = shift.Id, MonthlySalary = 45000m, IsActive = true, PasswordHash = PasswordHasher.Hash("admin123") },
-                new Employee { Code = "EMP002", Name = "Priya Verma", RoleId = 7, Email = "priya@example.com", Phone = "9000000002", ShiftId = shift.Id, MonthlySalary = 38000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") },
-                new Employee { Code = "EMP003", Name = "Rohan Gupta", RoleId = 3, Email = "rohan@example.com", Phone = "9000000003", ShiftId = shift.Id, MonthlySalary = 55000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") });
+                new Employee { Code = "EMP001", FirstName = "Aarav", LastName = "Sharma", RoleId = 1, Email = "aarav@example.com", Phone = "9000000001", ShiftId = shift.Id, MonthlySalary = 45000m, IsActive = true, PasswordHash = PasswordHasher.Hash("admin123") },
+                new Employee { Code = "EMP002", FirstName = "Priya", LastName = "Verma", RoleId = 7, Email = "priya@example.com", Phone = "9000000002", ShiftId = shift.Id, MonthlySalary = 38000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") },
+                new Employee { Code = "EMP003", FirstName = "Rohan", LastName = "Gupta", RoleId = 3, Email = "rohan@example.com", Phone = "9000000003", ShiftId = shift.Id, MonthlySalary = 55000m, IsActive = true, PasswordHash = PasswordHasher.Hash("pass123") });
             await db.SaveChangesAsync();
         }
 
