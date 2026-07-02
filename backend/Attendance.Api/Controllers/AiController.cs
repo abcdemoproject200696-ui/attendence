@@ -36,17 +36,15 @@ public record AiResult(bool Ok, string Reply, string Provider, bool Changed, str
 public class AiController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly Attendance.Api.Services.EmailSender _email;
-    private readonly Attendance.Api.Services.PushSender _push;
+    private readonly Attendance.Api.Services.TaskNotifier _notifier;
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(40) };
     private static readonly string[] ValidStatuses = { "ToDo", "InProgress", "Review", "Done" };
     private static readonly string[] ValidPriorities = { "Low", "Medium", "High", "Urgent" };
 
-    public AiController(AppDbContext db, Attendance.Api.Services.EmailSender email, Attendance.Api.Services.PushSender push)
+    public AiController(AppDbContext db, Attendance.Api.Services.TaskNotifier notifier)
     {
         _db = db;
-        _email = email;
-        _push = push;
+        _notifier = notifier;
     }
 
     // Tells the app which providers actually have a key configured (for the toggle).
@@ -269,46 +267,10 @@ public class AiController : ControllerBase
         };
         _db.Tasks.Add(t);
         await _db.SaveChangesAsync();
-        await NotifyAssigneeAsync(assignee, title!, project?.Name, due, priority,
-            emps.FirstOrDefault(e => e.Id == by)?.Name);
+        _notifier.FireAndForget(t.Id); // email + push in background
         var extra = new List<string> { priority, $"due {due}", $"{start[11..]}–{end[11..]}" };
         if (project != null) extra.Add(project.Name);
         return ($"✅ Task \"{title}\" assigned to {assignee.Name} ({string.Join(", ", extra)}).", true);
-    }
-
-    /// <summary>Email the assignee — only when Settings.TaskAssignEmail is on AND SMTP
-    /// env vars are configured. Best-effort; EmailSender swallows its own errors.</summary>
-    private async Task NotifyAssigneeAsync(Employee assignee, string title, string? project,
-        string? due, string? priority, string? assignedBy)
-    {
-        if (!assignee.IsActive) return; // never notify inactive
-
-        // ----- Email (gated by the admin setting) -----
-        if (_email.Enabled && !string.IsNullOrWhiteSpace(assignee.Email))
-        {
-            var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
-            if (settings is not null && settings.TaskAssignEmail)
-                await _email.SendTaskAssignedAsync(
-                    assignee.Email!, assignee.Name, title, project, due, priority, assignedBy);
-        }
-
-        // ----- Phone push (screen-off / app-closed) -----
-        if (_push.Enabled)
-        {
-            var tokens = await _db.DeviceTokens.Where(d => d.EmployeeId == assignee.Id)
-                .Select(d => d.Token).ToListAsync();
-            if (tokens.Count > 0)
-            {
-                var body = string.IsNullOrWhiteSpace(project) ? title : $"{title} · {project}";
-                var dead = await _push.SendToTokensAsync(
-                    tokens, "New task assigned", body, new Dictionary<string, string> { ["type"] = "task" });
-                if (dead.Count > 0)
-                {
-                    _db.DeviceTokens.RemoveRange(_db.DeviceTokens.Where(d => dead.Contains(d.Token)));
-                    await _db.SaveChangesAsync();
-                }
-            }
-        }
     }
 
     private async Task<(string, bool)> ChangeTask(JsonElement a, List<Employee> emps, List<Project> projects)
@@ -318,8 +280,14 @@ public class AiController : ControllerBase
         var task = (TaskItem)t;
 
         var changes = new List<string>();
+        var reassigned = false;
         if (MatchProject(Str(a, "project"), projects) is Project pr) { task.ProjectId = pr.Id; changes.Add($"project {pr.Name}"); }
-        if (MatchEmployee(Str(a, "assignee"), emps) is Employee em) { task.AssigneeId = em.Id; changes.Add($"assignee {em.Name}"); }
+        if (MatchEmployee(Str(a, "assignee"), emps) is Employee em)
+        {
+            reassigned = task.AssigneeId != em.Id; // notify the new assignee below
+            task.AssigneeId = em.Id;
+            changes.Add($"assignee {em.Name}");
+        }
         if (Str(a, "newTitle") is string nt && nt.Length > 0) { task.Title = nt; changes.Add($"renamed to \"{nt}\""); }
         if (Str(a, "dueDate") is string dd && dd.Length > 0) { task.DueDate = dd; changes.Add($"due {dd}"); }
         if (Str(a, "startTime") is string st && st.Length > 0) { task.StartTime = st; changes.Add($"start {st}"); }
@@ -328,6 +296,7 @@ public class AiController : ControllerBase
         if (ValidPriorities.Contains(Str(a, "priority"))) { task.Priority = Str(a, "priority")!; changes.Add($"priority {task.Priority}"); }
         if (changes.Count == 0) return ("Nothing to change — tell me what to update (time, status, assignee, project…).", false);
         await _db.SaveChangesAsync();
+        if (reassigned) _notifier.FireAndForget(task.Id); // email + push to the new assignee
         return ($"✅ Updated \"{task.Title}\": {string.Join(", ", changes)}.", true);
     }
 

@@ -1,4 +1,5 @@
 using Attendance.Api.Dtos;
+using Attendance.Api.Services;
 using Attendance.Domain.Entities;
 using Attendance.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,22 @@ namespace Attendance.Api.Controllers;
 public class DevicesController : ControllerBase
 {
     private readonly AppDbContext _db;
-    public DevicesController(AppDbContext db) => _db = db;
+    private readonly PushSender _push;
+    public DevicesController(AppDbContext db, PushSender push)
+    {
+        _db = db;
+        _push = push;
+    }
+
+    /// <summary>Diagnostics (no secrets): is FCM configured on the server, and how many
+    /// device tokens are registered (optionally for one employee)?</summary>
+    [HttpGet("status")]
+    public async Task<IActionResult> Status([FromQuery] int? employeeId)
+    {
+        var total = await _db.DeviceTokens.CountAsync();
+        int? forEmp = employeeId is int e ? await _db.DeviceTokens.CountAsync(d => d.EmployeeId == e) : null;
+        return Ok(new { pushEnabled = _push.Enabled, totalTokens = total, employeeTokens = forEmp });
+    }
 
     /// <summary>Register (or refresh) this device's FCM token for an employee, so the
     /// server can push task-assigned notifications to their phone. Idempotent: the

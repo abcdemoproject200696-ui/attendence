@@ -45,6 +45,7 @@ builder.Services.AddScoped<PermissionService>();
 builder.Services.AddSingleton<OtpService>();
 builder.Services.AddSingleton<Attendance.Api.Services.EmailSender>();
 builder.Services.AddSingleton<Attendance.Api.Services.PushSender>();
+builder.Services.AddSingleton<Attendance.Api.Services.TaskNotifier>();
 
 // ---- Controllers + JSON (camelCase default; enums as strings) ----
 builder.Services.AddControllers()

@@ -70,17 +70,15 @@ public class EmailSender
     /// <summary>Send a plain-HTML email. Never throws — failures are logged and swallowed
     /// so email problems can never break the request that triggered them.</summary>
     public async Task<bool> SendAsync(string toEmail, string subject, string htmlBody)
+        => (await SendReturningErrorAsync(toEmail, subject, htmlBody)) is null;
+
+    /// <summary>Like <see cref="SendAsync"/> but returns null on success or a short error
+    /// message on failure — used by the /email-test diagnostic so the admin can see the
+    /// real SMTP problem without digging through server logs.</summary>
+    public async Task<string?> SendReturningErrorAsync(string toEmail, string subject, string htmlBody)
     {
-        if (!Enabled)
-        {
-            _log.LogInformation("Email skipped (SMTP not configured): {Subject}", subject);
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(toEmail))
-        {
-            _log.LogInformation("Email skipped (no recipient): {Subject}", subject);
-            return false;
-        }
+        if (!Enabled) return "SMTP not configured (SMTP_USER / SMTP_PASS missing on the server).";
+        if (string.IsNullOrWhiteSpace(toEmail)) return "No recipient email.";
 
         var user = Env("SMTP_USER")!;
         var pass = Env("SMTP_PASS")!;
@@ -107,13 +105,13 @@ public class EmailSender
             await client.SendAsync(msg);
             await client.DisconnectAsync(true);
             _log.LogInformation("Email sent to {To}: {Subject}", toEmail, subject);
-            return true;
+            return null;
         }
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Email send failed to {To} via {Host}:{Port}: {Subject}",
                 toEmail, host, port, subject);
-            return false;
+            return $"{ex.GetType().Name}: {ex.Message}";
         }
     }
 

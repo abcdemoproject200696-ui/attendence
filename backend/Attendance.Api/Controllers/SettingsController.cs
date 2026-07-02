@@ -17,7 +17,32 @@ public class SettingsController : ControllerBase
     private const double MaxThreshold = 1.2;
 
     private readonly AppDbContext _db;
-    public SettingsController(AppDbContext db) => _db = db;
+    private readonly Attendance.Api.Services.EmailSender _email;
+    public SettingsController(AppDbContext db, Attendance.Api.Services.EmailSender email)
+    {
+        _db = db;
+        _email = email;
+    }
+
+    /// <summary>Diagnostic: try sending a test email and return the REAL SMTP error (if any)
+    /// plus the (non-secret) config being used — so the admin can fix it without server logs.
+    /// Example: GET /api/settings/email-test?to=me@example.com</summary>
+    [HttpGet("email-test")]
+    public async Task<IActionResult> EmailTest([FromQuery] string to)
+    {
+        var error = await _email.SendReturningErrorAsync(
+            to, "Test email — Tech Anusiya Attendance",
+            "<p>This is a test email. If you can read this, SMTP is working. ✅</p>");
+        return Ok(new
+        {
+            ok = error is null,
+            error,
+            usingHost = Environment.GetEnvironmentVariable("SMTP_HOST") ?? "(default) smtp.gmail.com",
+            usingPort = Environment.GetEnvironmentVariable("SMTP_PORT") ?? "(default) 587",
+            usingUser = Environment.GetEnvironmentVariable("SMTP_USER"),
+            usingFrom = Environment.GetEnvironmentVariable("SMTP_FROM"),
+        });
+    }
 
     // -------------------- GET --------------------
     [HttpGet]
