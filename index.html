@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/attendence/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="attendance_flutter">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>attendance_flutter</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- Browser face recognition. face-api.js is used for face DETECTION (the
+       bounding box) only. The actual embedding is produced by the SAME
+       MobileFaceNet TFLite model the mobile app uses, run via tfjs-tflite, so
+       web embeddings are 192-d and match faces enrolled on mobile. Loaded
+       before Flutter so the globals are present by the time the app needs them. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js"></script>
+
+  <!-- Global helper: window.faceEmbed192(video) -> Promise<number[]|null>.
+       CROSS-PLATFORM with the mobile app (lib/core/face_embedder_io.dart):
+       detect face + 68-pt landmarks -> compute the two eye centers -> EYE-ALIGN
+       warp the raw (unmirrored) video frame into a 112x112 crop using a fixed
+       template (identical math to Dart) -> normalize (p-128)/128 in R,G,B order
+       -> MobileFaceNet TFLite -> 192 floats -> L2-normalize. The aligned crop is
+       byte-equivalent to mobile's, so embeddings match across platforms.
+       No client-side matching; the backend matches. -->
+  <script>
+    (function () {
+      var ready = null;       // shared init promise
+      var frameCanvas = null; // full-frame canvas to read raw video pixels
+      var frameCtx = null;
+
+      // Eye-alignment template (destination eye centers in the 112x112 output).
+      // These MUST be byte-for-byte identical to the Dart implementation.
+      var LEX = 38.0, LEY = 48.0; // left-eye dest
+      var REX = 74.0, REY = 48.0; // right-eye dest
+      var SIZE = 112;
+
+      async function ensureReady() {
+        if (ready) return ready;
+        ready = (async function () {
+          // face-api models for detection (tinyFaceDetector + landmarks).
+          // 'models' resolves under the app base href (e.g. /attendence/models).
+          await faceapi.nets.tinyFaceDetector.loadFromUri('models');
+          await faceapi.nets.faceLandmark68Net.loadFromUri('models');
+          // tfjs-tflite ships a WASM backend; point it at the matching CDN dir.
+          if (typeof tflite.setWasmPath === 'function') {
+            // WASM lives under /wasm/ (NOT /dist/) — wrong path => '_malloc' undefined.
+            tflite.setWasmPath(
+              'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/wasm/');
+          }
+          window.__mfn = await tflite.loadTFLiteModel('models/mobilefacenet.tflite');
+          frameCanvas = document.createElement('canvas');
+          frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
+        })();
+        return ready;
+      }
+      window.faceEmbedReady = ensureReady;
+
+      // Average a contiguous run of face-api 68-pt landmark positions.
+      function eyeCenter(positions, from, to) {
+        var sx = 0, sy = 0, n = 0;
+        for (var i = from; i <= to; i++) {
+          sx += positions[i].x;
+          sy += positions[i].y;
+          n++;
+        }
+        return { x: sx / n, y: sy / n };
+      }
+
+      // Bilinear sample of [data] (RGBA, w x h) at (sx, sy), clamping to bounds.
+      // Returns [r, g, b]. Mirrors _bilinear in face_embedder_io.dart.
+      function bilinear(data, w, h, sx, sy) {
+        var fx = sx, fy = sy;
+        if (fx < 0) fx = 0;
+        if (fy < 0) fy = 0;
+        if (fx > w - 1) fx = w - 1;
+        if (fy > h - 1) fy = h - 1;
+        var x0 = Math.floor(fx), y0 = Math.floor(fy);
+        var x1 = x0 + 1, y1 = y0 + 1;
+        if (x1 > w - 1) x1 = w - 1;
+        if (y1 > h - 1) y1 = h - 1;
+        var dx = fx - x0, dy = fy - y0;
+        var w00 = (1 - dx) * (1 - dy);
+        var w10 = dx * (1 - dy);
+        var w01 = (1 - dx) * dy;
+        var w11 = dx * dy;
+        var i00 = (y0 * w + x0) * 4;
+        var i10 = (y0 * w + x1) * 4;
+        var i01 = (y1 * w + x0) * 4;
+        var i11 = (y1 * w + x1) * 4;
+        var r = data[i00] * w00 + data[i10] * w10 + data[i01] * w01 + data[i11] * w11;
+        var g = data[i00 + 1] * w00 + data[i10 + 1] * w10 + data[i01 + 1] * w01 + data[i11 + 1] * w11;
+        var b = data[i00 + 2] * w00 + data[i10 + 2] * w10 + data[i01 + 2] * w01 + data[i11 + 2] * w11;
+        return [r, g, b];
+      }
+
+      window.faceEmbed192 = async function (video) {
+        try {
+          await ensureReady();
+          var det = await faceapi.detectSingleFace(
+            video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 }))
+            .withFaceLandmarks();
+          if (!det || !det.landmarks) return null;
+
+          // face-api 68-pt: left eye = points 36..41, right eye = 42..47.
+          var pos = det.landmarks.positions;
+          if (!pos || pos.length < 48) return null;
+          var e0 = eyeCenter(pos, 36, 41);
+          var e1 = eyeCenter(pos, 42, 47);
+
+          // Sort by x: smaller x is the left eye (naming-independent).
+          var leftEye, rightEye;
+          if (e0.x <= e1.x) { leftEye = e0; rightEye = e1; }
+          else { leftEye = e1; rightEye = e0; }
+
+          // Read the RAW (unmirrored) video frame at native size into ImageData.
+          var vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return null;
+          if (frameCanvas.width !== vw) frameCanvas.width = vw;
+          if (frameCanvas.height !== vh) frameCanvas.height = vh;
+          frameCtx.drawImage(video, 0, 0, vw, vh);
+          var src = frameCtx.getImageData(0, 0, vw, vh).data; // RGBA, vw*vh*4
+
+          // Inverse similarity transform (identical math to Dart _alignFace).
+          var sdx = rightEye.x - leftEye.x;
+          var sdy = rightEye.y - leftEye.y;
+          var srcDist = Math.sqrt(sdx * sdx + sdy * sdy);
+          if (srcDist <= 0) srcDist = 1.0;
+          var scale = (REX - LEX) / srcDist; // = 36/srcDist
+          var angle = -Math.atan2(sdy, sdx);
+          var ca = Math.cos(angle), sa = Math.sin(angle);
+
+          var arr = new Float32Array(SIZE * SIZE * 3);
+          var j = 0;
+          for (var oy = 0; oy < SIZE; oy++) {
+            for (var ox = 0; ox < SIZE; ox++) {
+              var vx = ox - LEX;
+              var vy = oy - LEY;
+              var sx = leftEye.x + (ca * vx + sa * vy) / scale;
+              var sy = leftEye.y + (-sa * vx + ca * vy) / scale;
+              var rgb = bilinear(src, vw, vh, sx, sy);
+              arr[j++] = (rgb[0] - 128) / 128.0; // R
+              arr[j++] = (rgb[1] - 128) / 128.0; // G
+              arr[j++] = (rgb[2] - 128) / 128.0; // B
+            }
+          }
+
+          var input = tf.tensor(arr, [1, 112, 112, 3]);
+          var out = window.__mfn.predict(input);
+          var vec = await out.data(); // Float32Array(192)
+          tf.dispose([input, out]);
+
+          var norm = 0.0;
+          for (var k = 0; k < vec.length; k++) norm += vec[k] * vec[k];
+          norm = Math.sqrt(norm);
+          var result = new Array(vec.length);
+          for (var m = 0; m < vec.length; m++) {
+            result[m] = norm === 0 ? vec[m] : vec[m] / norm;
+          }
+          return result;
+        } catch (e) {
+          console.error('faceEmbed192 error', e);
+          return null;
+        }
+      };
+    })();
+  </script>
+
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
