@@ -76,6 +76,12 @@ public static class DbConnectionHelper
         if (string.IsNullOrEmpty(database))
             throw new ArgumentException("DATABASE_URL has no database name.", nameof(databaseUrl));
 
+        // A local Postgres (e.g. a dev machine holding a copy of prod data) usually has SSL
+        // turned off, so forcing Require there fails to connect. Use Prefer for localhost —
+        // it uses TLS when the server offers it and falls back to plaintext otherwise. Remote
+        // hosts (Render) still Require SSL.
+        var isLocal = host is "localhost" or "127.0.0.1" or "::1";
+
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
         {
             Host = host,
@@ -86,7 +92,7 @@ public static class DbConnectionHelper
             // Render-managed Postgres requires SSL. In Npgsql 10, SslMode.Require connects
             // over TLS without validating the server cert chain (suitable for Render's
             // self-managed certs), so no separate TrustServerCertificate flag is needed.
-            SslMode = Npgsql.SslMode.Require
+            SslMode = isLocal ? Npgsql.SslMode.Prefer : Npgsql.SslMode.Require
         };
 
         return builder.ConnectionString;

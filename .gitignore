@@ -43,3 +43,4 @@ Thumbs.db
 # Capacitor Android native project (regenerate with build-apk.ps1) + build artifacts
 frontend/android/
 frontend/attendance-web.zip
+/backend/Attendance.Api/appsettings.Development.json

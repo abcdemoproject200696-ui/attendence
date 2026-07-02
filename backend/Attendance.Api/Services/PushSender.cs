@@ -35,17 +35,22 @@ public class PushSender
             if (_initTried) return _app;
             _initTried = true;
 
-            var json = Env("FIREBASE_CREDENTIALS");
-            if (string.IsNullOrWhiteSpace(json))
+            var cred = Env("FIREBASE_CREDENTIALS");
+            if (string.IsNullOrWhiteSpace(cred))
             {
                 _log.LogInformation("Push disabled (FIREBASE_CREDENTIALS not set).");
                 return null;
             }
             try
             {
+                // FIREBASE_CREDENTIALS may be the full service-account JSON (Render) OR,
+                // for local dev, a PATH to the downloaded service-account .json file.
+                var googleCred = File.Exists(cred.Trim())
+                    ? GoogleCredential.FromFile(cred.Trim())
+                    : GoogleCredential.FromJson(cred);
                 _app = FirebaseApp.DefaultInstance ?? FirebaseApp.Create(new AppOptions
                 {
-                    Credential = GoogleCredential.FromJson(json),
+                    Credential = googleCred,
                 });
             }
             catch (Exception ex)

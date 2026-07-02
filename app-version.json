@@ -1,6 +1,6 @@
 {
-  "versionCode": 4030,
-  "versionName": "1.7.3",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.3.apk",
-  "notes": "Departments are now a managed list you pick from a dropdown in Add Employee (with an add/edit/delete manager). Employee KYC documents (Aadhaar, PAN, degree, bank proof — JPG/PNG/PDF) can be uploaded, previewed with zoom, verified and deleted. Employees are now deactivated instead of deleted (history + documents kept), and inactive employees are hidden unless you enable 'Show inactive employees' in Settings."
+  "versionCode": 4031,
+  "versionName": "1.7.4",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.4.apk",
+  "notes": "When a task is assigned and the app is open, you now get a colourful in-app popup (like the sign-up screen) with a 'View task' button that jumps straight to the Tasks board and highlights the new task — on both the app and the web. Task notifications now also appear while the app/tab is in the foreground. Plus: important employee details (designation, department, joining date, addresses, and KYC & bank fields) are now required when EDITING an employee too, not just when adding one."
 }

@@ -11,6 +11,23 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---- Local dev convenience ----
+// Secrets are read at runtime via Environment.GetEnvironmentVariable(...). In
+// production Render injects them as real env vars. For LOCAL debugging, let the
+// same keys live in appsettings.Development.json (git-ignored) — copy each into a
+// process env var here if it isn't already set. Prod env vars always win.
+foreach (var key in new[]
+{
+    "DATABASE_URL", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM",
+    "SMTP_FROM_NAME", "SUPPORT_EMAIL", "BREVO_API_KEY", "FIREBASE_CREDENTIALS",
+    "GEMINI_API_KEY", "GROQ_API_KEY",
+})
+{
+    var v = builder.Configuration[key];
+    if (!string.IsNullOrWhiteSpace(v) && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(key)))
+        Environment.SetEnvironmentVariable(key, v);
+}
+
 const string CorsPolicy = "FrontendCors";
 
 // ---- Container hosting: bind to the port Render injects via PORT (if present). ----
