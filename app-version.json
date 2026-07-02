@@ -1,6 +1,6 @@
 {
-  "versionCode": 4027,
-  "versionName": "1.7.0",
-  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.0.apk",
-  "notes": "Email + push notifications: when a task is assigned, the assignee now gets a branded email and a phone push notification (even with the screen off or the app closed). New sign-ups can be verified with an email OTP (admin toggles both in Settings). Inactive employees are never notified. Plus a colourful new sign-up success screen."
+  "versionCode": 4028,
+  "versionName": "1.7.1",
+  "apkUrl": "https://raw.githubusercontent.com/abcdemoproject200696-ui/attendence/main/dist/attendance-arm64-v1.7.1.apk",
+  "notes": "Task scheduling made faster: pick a task's due date and the Start and End times now auto-fill onto that date (start = current time, end = +30 min). You can still adjust either time manually."
 }
