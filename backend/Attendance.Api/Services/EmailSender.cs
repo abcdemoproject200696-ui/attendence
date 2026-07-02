@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text;
+using System.Text.Json;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
@@ -62,10 +64,15 @@ public class EmailSender
         "<div style=\"padding:22px\">" + bodyHtml + "</div>" +
         FooterBand() + "</div>";
 
-    /// <summary>True only when SMTP_USER and SMTP_PASS are both configured.</summary>
+    // Shared client for the Brevo HTTP API (works over HTTPS 443 — Render never
+    // blocks it, unlike outbound SMTP which the free tier drops).
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
+
+    /// <summary>Configured when either Brevo (HTTP API) or SMTP creds are present.
+    /// Brevo takes priority because SMTP is blocked on Render's free tier.</summary>
     public bool Enabled =>
-        !string.IsNullOrWhiteSpace(Env("SMTP_USER")) &&
-        !string.IsNullOrWhiteSpace(Env("SMTP_PASS"));
+        !string.IsNullOrWhiteSpace(Env("BREVO_API_KEY")) ||
+        (!string.IsNullOrWhiteSpace(Env("SMTP_USER")) && !string.IsNullOrWhiteSpace(Env("SMTP_PASS")));
 
     /// <summary>Send a plain-HTML email. Never throws — failures are logged and swallowed
     /// so email problems can never break the request that triggered them.</summary>
@@ -77,8 +84,13 @@ public class EmailSender
     /// real SMTP problem without digging through server logs.</summary>
     public async Task<string?> SendReturningErrorAsync(string toEmail, string subject, string htmlBody)
     {
-        if (!Enabled) return "SMTP not configured (SMTP_USER / SMTP_PASS missing on the server).";
+        if (!Enabled) return "Email not configured (set BREVO_API_KEY, or SMTP_USER/SMTP_PASS).";
         if (string.IsNullOrWhiteSpace(toEmail)) return "No recipient email.";
+
+        // Prefer the Brevo HTTP API — it works on Render (HTTPS), SMTP does not.
+        var brevoKey = Env("BREVO_API_KEY");
+        if (!string.IsNullOrWhiteSpace(brevoKey))
+            return await SendViaBrevoAsync(brevoKey!, toEmail, subject, htmlBody);
 
         var user = Env("SMTP_USER")!;
         var pass = Env("SMTP_PASS")!;
@@ -111,6 +123,43 @@ public class EmailSender
         {
             _log.LogWarning(ex, "Email send failed to {To} via {Host}:{Port}: {Subject}",
                 toEmail, host, port, subject);
+            return $"{ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    /// <summary>Send via the Brevo transactional-email HTTP API (HTTPS). The sender
+    /// address (SMTP_FROM ?? SMTP_USER) must be a VERIFIED sender in the Brevo account.</summary>
+    private async Task<string?> SendViaBrevoAsync(string apiKey, string toEmail, string subject, string htmlBody)
+    {
+        var fromEmail = (Env("SMTP_FROM") ?? Env("SMTP_USER") ?? "").Trim();
+        var fromName = Env("SMTP_FROM_NAME") ?? "Attendance";
+        if (string.IsNullOrWhiteSpace(fromEmail))
+            return "No sender address (set SMTP_FROM or SMTP_USER to your verified Brevo sender).";
+        try
+        {
+            var payload = new
+            {
+                sender = new { name = fromName, email = fromEmail },
+                to = new[] { new { email = toEmail } },
+                subject,
+                htmlContent = htmlBody,
+            };
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+            req.Headers.Add("api-key", apiKey);
+            req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var resp = await _http.SendAsync(req);
+            if (resp.IsSuccessStatusCode)
+            {
+                _log.LogInformation("Email sent to {To} via Brevo: {Subject}", toEmail, subject);
+                return null;
+            }
+            var body = await resp.Content.ReadAsStringAsync();
+            _log.LogWarning("Brevo send failed ({Status}) to {To}: {Body}", (int)resp.StatusCode, toEmail, body);
+            return $"Brevo {(int)resp.StatusCode}: {body}";
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Brevo send failed to {To}: {Subject}", toEmail, subject);
             return $"{ex.GetType().Name}: {ex.Message}";
         }
     }
