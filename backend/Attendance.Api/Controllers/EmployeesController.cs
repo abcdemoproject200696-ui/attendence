@@ -28,7 +28,12 @@ public class EmployeesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetAll()
     {
-        var list = await _db.Employees.AsNoTracking().Include(e => e.Role).OrderBy(e => e.Code).ToListAsync();
+        // Inactive employees are hidden unless the admin enabled "Show inactive employees".
+        var settings = await _db.Settings.AsNoTracking().FirstOrDefaultAsync();
+        var showInactive = settings?.ShowInactiveEmployees ?? false;
+        var q = _db.Employees.AsNoTracking().Include(e => e.Role).AsQueryable();
+        if (!showInactive) q = q.Where(e => e.IsActive);
+        var list = await q.OrderBy(e => e.Code).ToListAsync();
         return Ok(list.Select(e => e.ToDto()));
     }
 
@@ -238,23 +243,21 @@ public class EmployeesController : ControllerBase
         return Ok(e.ToDto());
     }
 
+    // Employees are NEVER hard-deleted (data retention) — this DEACTIVATES them
+    // (IsActive = false). Their attendance/leave history is kept. A deactivated
+    // employee can't log in, gets no notifications, and is hidden from the list
+    // unless the admin enables "Show inactive employees".
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var e = await _db.Employees.FirstOrDefaultAsync(x => x.Id == id);
         if (e is null) return NotFound();
 
-        // Admin accounts are protected: NOBODY (not even another admin or HR) can
-        // delete them. Enforced server-side so no client can bypass it.
+        // Admin accounts are protected: nobody can deactivate an admin.
         if (e.RoleId == 1)
-            return StatusCode(403, "Admin accounts cannot be deleted.");
+            return StatusCode(403, "Admin accounts cannot be deactivated.");
 
-        // Full cascade: remove ALL of this employee's related records first, then the
-        // employee (face descriptors live on the employee row, so they go with it).
-        _db.Punches.RemoveRange(_db.Punches.Where(p => p.EmployeeId == id));
-        _db.Days.RemoveRange(_db.Days.Where(d => d.EmployeeId == id));
-        _db.Leaves.RemoveRange(_db.Leaves.Where(l => l.EmployeeId == id));
-        _db.Employees.Remove(e);
+        e.IsActive = false;
         await _db.SaveChangesAsync();
         return NoContent();
     }

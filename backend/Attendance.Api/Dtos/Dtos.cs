@@ -225,7 +225,8 @@ public class LeaveUpdateDto
 // ---------- App settings ----------
 public record AppSettingDto(
     int Id, double FaceMatchThreshold, bool RequireLiveness, bool VoiceEnabled, bool OvertimePayable,
-    bool HrCanEditAttendance, bool TaskAssignEmail, bool SignupOtpEmail, bool ManualEmpCode, int EmpCodeStart);
+    bool HrCanEditAttendance, bool TaskAssignEmail, bool SignupOtpEmail, bool ManualEmpCode, int EmpCodeStart,
+    bool ShowInactiveEmployees);
 
 public class AppSettingUpdateDto
 {
@@ -238,6 +239,7 @@ public class AppSettingUpdateDto
     public bool? SignupOtpEmail { get; set; }
     public bool? ManualEmpCode { get; set; }
     public int? EmpCodeStart { get; set; }
+    public bool? ShowInactiveEmployees { get; set; }
 }
 
 // ---------- Monthly report ----------

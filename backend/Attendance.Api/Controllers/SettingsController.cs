@@ -69,6 +69,7 @@ public class SettingsController : ControllerBase
         if (dto.SignupOtpEmail.HasValue) settings.SignupOtpEmail = dto.SignupOtpEmail.Value;
         if (dto.ManualEmpCode.HasValue) settings.ManualEmpCode = dto.ManualEmpCode.Value;
         if (dto.EmpCodeStart.HasValue) settings.EmpCodeStart = dto.EmpCodeStart.Value < 1 ? 1 : dto.EmpCodeStart.Value;
+        if (dto.ShowInactiveEmployees.HasValue) settings.ShowInactiveEmployees = dto.ShowInactiveEmployees.Value;
 
         await _db.SaveChangesAsync();
         return Ok(settings.ToDto());

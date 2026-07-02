@@ -43,4 +43,8 @@ public class AppSetting
     /// <summary>The number auto-generated codes start from (e.g. 1 → EMP001). Only used
     /// when ManualEmpCode is false. New code = max(existing, this) + 1.</summary>
     public int EmpCodeStart { get; set; } = 1;
+
+    /// <summary>When true, the employees list also shows INACTIVE employees; when false
+    /// (default), only active employees are listed.</summary>
+    public bool ShowInactiveEmployees { get; set; }
 }

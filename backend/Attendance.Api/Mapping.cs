@@ -40,7 +40,8 @@ public static class Mapping
 
     public static AppSettingDto ToDto(this AppSetting s) => new(
         s.Id, s.FaceMatchThreshold, s.RequireLiveness, s.VoiceEnabled, s.OvertimePayable,
-        s.HrCanEditAttendance, s.TaskAssignEmail, s.SignupOtpEmail, s.ManualEmpCode, s.EmpCodeStart);
+        s.HrCanEditAttendance, s.TaskAssignEmail, s.SignupOtpEmail, s.ManualEmpCode, s.EmpCodeStart,
+        s.ShowInactiveEmployees);
 
     public static LeaveDto ToDto(this LeaveRequest l) => new(
         l.Id, l.EmployeeId, l.Employee?.Name, l.FromDate.ToString(DateFmt),

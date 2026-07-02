@@ -121,5 +121,15 @@ public static class DbSeeder
                 new Holiday { Date = new DateTime(year, 11, 8), Name = "Diwali", IsPaid = true });
             await db.SaveChangesAsync();
         }
+
+        // Departments — 3 default IT departments (admin can add/edit/delete later).
+        if (!await db.Departments.AnyAsync())
+        {
+            db.Departments.AddRange(
+                new Department { Name = "Software Development", IsActive = true },
+                new Department { Name = "Quality Assurance", IsActive = true },
+                new Department { Name = "DevOps", IsActive = true });
+            await db.SaveChangesAsync();
+        }
     }
 }

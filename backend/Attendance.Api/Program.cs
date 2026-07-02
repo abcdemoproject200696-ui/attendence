@@ -204,6 +204,26 @@ using (var scope = app.Services.CreateScope())
             "\"Token\" text NOT NULL, " +
             "\"Platform\" text NULL, " +
             "\"UpdatedAt\" timestamptz NOT NULL);");
+        // Department master list (for the Add-Employee dropdown).
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"Departments\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"Name\" text NOT NULL, " +
+            "\"IsActive\" boolean NOT NULL DEFAULT TRUE);");
+        // Employee KYC / joining documents (base64 in DB).
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE TABLE IF NOT EXISTS \"EmployeeDocuments\" (" +
+            "\"Id\" serial PRIMARY KEY, " +
+            "\"EmployeeId\" integer NOT NULL, " +
+            "\"DocType\" text NOT NULL, " +
+            "\"FileName\" text NOT NULL, " +
+            "\"MimeType\" text NOT NULL, " +
+            "\"DataBase64\" text NOT NULL, " +
+            "\"Verified\" boolean NOT NULL DEFAULT FALSE, " +
+            "\"IsActive\" boolean NOT NULL DEFAULT TRUE, " +
+            "\"UploadedAt\" timestamptz NOT NULL);");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"Settings\" ADD COLUMN IF NOT EXISTS \"ShowInactiveEmployees\" boolean NOT NULL DEFAULT FALSE;");
     }
     else
     {
@@ -391,6 +411,31 @@ using (var scope = app.Services.CreateScope())
                 "\"UpdatedAt\" TEXT NOT NULL);");
         }
         catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"Departments\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_Departments\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"Name\" TEXT NOT NULL, " +
+                "\"IsActive\" INTEGER NOT NULL DEFAULT 1);");
+        }
+        catch { /* table already exists */ }
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"EmployeeDocuments\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_EmployeeDocuments\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"EmployeeId\" INTEGER NOT NULL, " +
+                "\"DocType\" TEXT NOT NULL, " +
+                "\"FileName\" TEXT NOT NULL, " +
+                "\"MimeType\" TEXT NOT NULL, " +
+                "\"DataBase64\" TEXT NOT NULL, " +
+                "\"Verified\" INTEGER NOT NULL DEFAULT 0, " +
+                "\"IsActive\" INTEGER NOT NULL DEFAULT 1, " +
+                "\"UploadedAt\" TEXT NOT NULL);");
+        }
+        catch { /* table already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Settings\" ADD COLUMN \"ShowInactiveEmployees\" INTEGER NOT NULL DEFAULT 0;"); } catch { }
     }
 
     await DbSeeder.SeedAsync(db);
